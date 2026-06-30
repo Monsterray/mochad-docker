@@ -1,0 +1,19 @@
+---
+services:
+  mochad:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: x10-mochad:local
+    container_name: mochad-debug
+
+    privileged: true
+    network_mode: host
+
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+
+    command: sh -c "/usr/local/bin/mochad -d 2>&1 | tee /tmp/mochad.log"
+
+    tty: true
+    stdin_open: true

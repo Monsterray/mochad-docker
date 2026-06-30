@@ -1,0 +1,31 @@
+---
+services:
+  mochad:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: x10-mochad:local
+    container_name: mochad
+    hostname: mochad
+    restart: unless-stopped
+
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RAWIO
+
+    ports:
+      - "${MOCHAD_PORT:-1099}:1099"
+
+    environment:
+      TZ: ${TZ:-America/Los_Angeles}
+
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 1099 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
