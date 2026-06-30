@@ -39,13 +39,19 @@ RUN make DESTDIR=/tmp/install install
 ###############################################################################
 FROM alpine:3.22
 
+ARG BUILD_DATE
+ARG VCS_REF
+ARG IMAGE_VERSION=0.1.0
+
 LABEL org.opencontainers.image.title="mochad"
 LABEL org.opencontainers.image.description="X10 CM15A CM19A USB automation daemon"
-LABEL org.opencontainers.image.version="latest"
-LABEL org.opencontainers.image.vendor="Community"
-LABEL org.opencontainers.image.url="https://github.com/Monsterray/mochad"
-LABEL org.opencontainers.image.source="https://github.com/Monsterray/mochad"
-LABEL org.opencontainers.image.documentation="https://github.com/Monsterray/mochad"
+LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
+LABEL org.opencontainers.image.vendor="MQTT Mochad Bridge contributors"
+LABEL org.opencontainers.image.url="https://github.com/Monsterray/mochad-docker"
+LABEL org.opencontainers.image.source="https://github.com/Monsterray/mochad-docker"
+LABEL org.opencontainers.image.documentation="https://github.com/Monsterray/mochad-docker"
 LABEL org.opencontainers.image.licenses="GPL-2.0"
 
 RUN apk add --no-cache \

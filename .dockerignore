@@ -6,3 +6,8 @@ README.md
 .env.*
 !.env.example
 docker-compose.override.yml
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE.md
+RELEASE_CHECKLIST.md
+SECURITY.md

@@ -1,5 +1,9 @@
 # mochad Docker Image
 
+![Status](https://img.shields.io/badge/status-integration%20testing-yellow)
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![License](https://img.shields.io/badge/packaging%20license-MIT-green)
+
 This image builds and runs `mochad`, the TCP daemon that talks to the X10 USB
 controller.
 
@@ -10,6 +14,8 @@ published host port.
 The image has been tested with `mochad` 0.1.18. The Dockerfile can build a
 different upstream commit by setting `MOCHAD_COMMIT`, but the bridge project
 does not pin `mochad`.
+
+Packaging version: `0.1.0`
 
 ## Runtime Contract
 
