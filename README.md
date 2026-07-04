@@ -19,7 +19,9 @@ Packaging version: `0.1.0`
 
 ## Runtime Contract
 
-- Listens on TCP port `1099`.
+- Upstream `mochad` listens on TCP port `1099`.
+- Upstream also opens auxiliary ports `1100` and `1101` for legacy client
+  compatibility.
 - Exposes a health check that verifies the TCP listener is accepting
   connections.
 - Requires USB access to the X10 controller from the host. For a CM19A, Docker
@@ -28,6 +30,37 @@ Packaging version: `0.1.0`
   permissions.
 - The compose service name should remain `mochad` so the bridge can use
   `MOCHAD_HOST=mochad`.
+
+## Configuration
+
+Runtime environment variables:
+
+```text
+TZ=America/Los_Angeles
+MOCHAD_FOREGROUND=true
+MOCHAD_RAW_DATA=false
+MOCHAD_SHOW_VERSION=false
+MOCHAD_SHOW_HELP=false
+MOCHAD_ARGS=
+MOCHAD_PORT=1099
+```
+
+`MOCHAD_FOREGROUND=true` passes `-d`, which keeps `mochad` in the foreground so
+Docker can supervise it. `MOCHAD_RAW_DATA=true` passes `--raw-data`.
+`MOCHAD_SHOW_VERSION=true` passes `--version`, and `MOCHAD_SHOW_HELP=true`
+passes `--help`; those are mainly useful for one-off diagnostics because
+`mochad` exits after printing them. `MOCHAD_ARGS` appends operator-supplied
+upstream `mochad` arguments; do not put secrets in it.
+
+Upstream `mochad` 0.1.18 hardcodes its internal TCP listener to `1099`.
+It also hardcodes auxiliary listener ports `1100` and `1101`. `MOCHAD_PORT`
+controls the host port published by Docker Compose for internal port `1099`,
+not the daemon's internal listening port.
+
+Daemon port and bind-address environment variables are not supported by
+upstream `mochad` 0.1.18. Do not add `MOCHAD_BIND`, `MOCHAD_LISTEN_PORT`, or
+similar variables until this project intentionally maintains a patched upstream
+fork.
 
 ## Local Build
 

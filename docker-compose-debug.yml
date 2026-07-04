@@ -13,7 +13,14 @@ services:
     devices:
       - /dev/bus/usb:/dev/bus/usb
 
-    command: sh -c "/usr/local/bin/mochad -d 2>&1 | tee /tmp/mochad.log"
+    environment:
+      MOCHAD_FOREGROUND: ${MOCHAD_FOREGROUND:-true}
+      MOCHAD_RAW_DATA: ${MOCHAD_RAW_DATA:-true}
+      MOCHAD_SHOW_VERSION: ${MOCHAD_SHOW_VERSION:-false}
+      MOCHAD_SHOW_HELP: ${MOCHAD_SHOW_HELP:-false}
+      MOCHAD_ARGS: ${MOCHAD_ARGS:-}
+
+    command: sh -c "/usr/local/bin/mochad-entrypoint.sh 2>&1 | tee /tmp/mochad.log"
 
     tty: true
     stdin_open: true

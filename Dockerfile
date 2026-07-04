@@ -74,6 +74,15 @@ COPY --from=builder \
 
 EXPOSE 1099/tcp
 
+COPY mochad-entrypoint.sh /usr/local/bin/mochad-entrypoint.sh
+RUN chmod +x /usr/local/bin/mochad-entrypoint.sh
+
+ENV MOCHAD_FOREGROUND=true
+ENV MOCHAD_RAW_DATA=false
+ENV MOCHAD_SHOW_VERSION=false
+ENV MOCHAD_SHOW_HELP=false
+ENV MOCHAD_ARGS=""
+
 HEALTHCHECK --interval=30s \
             --timeout=5s \
             --start-period=10s \
@@ -82,4 +91,4 @@ CMD nc -z localhost 1099 || exit 1
 
 ENTRYPOINT ["/sbin/tini","--"]
 
-CMD ["/usr/local/bin/mochad", "-d"]
+CMD ["/usr/local/bin/mochad-entrypoint.sh"]
