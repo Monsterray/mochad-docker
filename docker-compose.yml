@@ -4,6 +4,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        MOCHAD_REPOSITORY: ${MOCHAD_REPOSITORY:-https://github.com/Monsterray/mochad-redux.git}
+        MOCHAD_REF: ${MOCHAD_REF:-develop}
     image: x10-mochad:local
     container_name: mochad
     hostname: mochad
@@ -18,21 +21,24 @@ services:
       - SYS_RAWIO
 
     ports:
-      # Host port only. Upstream mochad hardcodes internal port 1099.
-      - "${MOCHAD_PORT:-1099}:1099" # Main tcp port
-      #   - "1100:1100" # optional XML socket
-      #   - "1101:1101" # optional OpenRemote socket
+      - "${MOCHAD_PORT:-1099}:${MOCHAD_PORT:-1099}" # Main tcp port
+      # - "${MOCHAD_XML_PORT:-1100}:${MOCHAD_XML_PORT:-1100}" # optional XML socket
+      # - "${MOCHAD_OPENREMOTE_PORT:-1101}:${MOCHAD_OPENREMOTE_PORT:-1101}" # optional OpenRemote socket
 
     environment:
       TZ: ${TZ:-America/Los_Angeles}
       MOCHAD_FOREGROUND: ${MOCHAD_FOREGROUND:-true}
       MOCHAD_RAW_DATA: ${MOCHAD_RAW_DATA:-false}
+      MOCHAD_BIND: ${MOCHAD_BIND:-0.0.0.0}
+      MOCHAD_PORT: ${MOCHAD_PORT:-1099}
+      MOCHAD_XML_PORT: ${MOCHAD_XML_PORT:-1100}
+      MOCHAD_OPENREMOTE_PORT: ${MOCHAD_OPENREMOTE_PORT:-1101}
       MOCHAD_SHOW_VERSION: ${MOCHAD_SHOW_VERSION:-false}
       MOCHAD_SHOW_HELP: ${MOCHAD_SHOW_HELP:-false}
       MOCHAD_ARGS: ${MOCHAD_ARGS:-}
 
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 1099 || exit 1"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 $${MOCHAD_PORT:-1099} || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

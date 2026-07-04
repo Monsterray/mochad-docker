@@ -11,17 +11,18 @@ This repository is the mochad Docker project only. The MQTT bridge is a
 separate project and connects to this container over TCP at `mochad:1099` or a
 published host port.
 
-The image has been tested with `mochad` 0.1.18. The Dockerfile can build a
-different upstream commit by setting `MOCHAD_COMMIT`, but the bridge project
-does not pin `mochad`.
+The image defaults to the maintained `mochad-redux` repository. The Dockerfile
+can build a different repository, branch, tag, or commit by setting
+`MOCHAD_REPOSITORY` and `MOCHAD_REF`, but the bridge project does not pin
+`mochad`.
 
 Packaging version: `0.1.0`
 
 ## Runtime Contract
 
-- Upstream `mochad` listens on TCP port `1099`.
-- Upstream also opens auxiliary ports `1100` and `1101` for legacy client
-  compatibility.
+- `mochad-redux` listens on TCP port `1099` by default.
+- It also opens auxiliary ports `1100` and `1101` for legacy client
+  compatibility by default.
 - Exposes a health check that verifies the TCP listener is accepting
   connections.
 - Requires USB access to the X10 controller from the host. For a CM19A, Docker
@@ -37,12 +38,17 @@ Runtime environment variables:
 
 ```text
 TZ=America/Los_Angeles
+MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git
+MOCHAD_REF=develop
 MOCHAD_FOREGROUND=true
 MOCHAD_RAW_DATA=false
+MOCHAD_BIND=0.0.0.0
+MOCHAD_PORT=1099
+MOCHAD_XML_PORT=1100
+MOCHAD_OPENREMOTE_PORT=1101
 MOCHAD_SHOW_VERSION=false
 MOCHAD_SHOW_HELP=false
 MOCHAD_ARGS=
-MOCHAD_PORT=1099
 ```
 
 `MOCHAD_FOREGROUND=true` passes `-d`, which keeps `mochad` in the foreground so
@@ -52,21 +58,35 @@ passes `--help`; those are mainly useful for one-off diagnostics because
 `mochad` exits after printing them. `MOCHAD_ARGS` appends operator-supplied
 upstream `mochad` arguments; do not put secrets in it.
 
-Upstream `mochad` 0.1.18 hardcodes its internal TCP listener to `1099`.
-It also hardcodes auxiliary listener ports `1100` and `1101`. `MOCHAD_PORT`
-controls the host port published by Docker Compose for internal port `1099`,
-not the daemon's internal listening port.
-
-Daemon port and bind-address environment variables are not supported by
-upstream `mochad` 0.1.18. Do not add `MOCHAD_BIND`, `MOCHAD_LISTEN_PORT`, or
-similar variables until this project intentionally maintains a patched upstream
-fork.
+`MOCHAD_BIND`, `MOCHAD_PORT`, `MOCHAD_XML_PORT`, and
+`MOCHAD_OPENREMOTE_PORT` map to `mochad-redux` listener options. Defaults
+preserve the historical behavior: `0.0.0.0:1099`, `0.0.0.0:1100`, and
+`0.0.0.0:1101`. Ports must be distinct TCP ports from `1` to `65535`.
 
 ## Local Build
 
 ```sh
 docker compose build
 ```
+
+To test a specific branch of `mochad-redux`, build with:
+
+```sh
+MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
+MOCHAD_REF=develop \
+docker compose build --no-cache
+```
+
+Or put those values in `.env`:
+
+```text
+MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git
+MOCHAD_REF=develop
+```
+
+The Dockerfile clones the source inside the build container, so
+`MOCHAD_REPOSITORY` should be a Git URL that the Docker builder can reach.
+`MOCHAD_REF` may be a branch, tag, or commit SHA.
 
 ## Standalone Run
 

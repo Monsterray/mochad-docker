@@ -24,6 +24,22 @@ if mochad_bool_enabled "${MOCHAD_RAW_DATA:-false}"; then
     set -- "$@" "--raw-data"
 fi
 
+if [ -n "${MOCHAD_BIND:-}" ]; then
+    set -- "$@" "--bind" "$MOCHAD_BIND"
+fi
+
+if [ -n "${MOCHAD_PORT:-}" ]; then
+    set -- "$@" "--port" "$MOCHAD_PORT"
+fi
+
+if [ -n "${MOCHAD_XML_PORT:-}" ]; then
+    set -- "$@" "--xml-port" "$MOCHAD_XML_PORT"
+fi
+
+if [ -n "${MOCHAD_OPENREMOTE_PORT:-}" ]; then
+    set -- "$@" "--openremote-port" "$MOCHAD_OPENREMOTE_PORT"
+fi
+
 if [ "${MOCHAD_SHOW_VERSION:-false}" = "true" ]; then
     set -- "$@" "--version"
 fi
