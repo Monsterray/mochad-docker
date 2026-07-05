@@ -91,7 +91,9 @@ ENV MOCHAD_FOREGROUND=true
 ENV MOCHAD_RAW_DATA=false
 ENV MOCHAD_BIND=0.0.0.0
 ENV MOCHAD_PORT=1099
+ENV MOCHAD_XML_ENABLED=true
 ENV MOCHAD_XML_PORT=1100
+ENV MOCHAD_OPENREMOTE_ENABLED=true
 ENV MOCHAD_OPENREMOTE_PORT=1101
 ENV MOCHAD_SHOW_VERSION=false
 ENV MOCHAD_SHOW_HELP=false
@@ -101,7 +103,13 @@ HEALTHCHECK --interval=30s \
             --timeout=5s \
             --start-period=10s \
             --retries=3 \
-CMD nc -z localhost "${MOCHAD_PORT:-1099}" || exit 1
+CMD bind="${MOCHAD_BIND:-0.0.0.0}"; \
+    case "$bind" in \
+      0.0.0.0) health_host=127.0.0.1 ;; \
+      ::) health_host=::1 ;; \
+      *) health_host="$bind" ;; \
+    esac; \
+    nc -z "$health_host" "${MOCHAD_PORT:-1099}" || exit 1
 
 ENTRYPOINT ["/sbin/tini","--"]
 

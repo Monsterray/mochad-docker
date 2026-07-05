@@ -32,8 +32,20 @@ if [ -n "${MOCHAD_PORT:-}" ]; then
     set -- "$@" "--port" "$MOCHAD_PORT"
 fi
 
+if mochad_bool_enabled "${MOCHAD_XML_ENABLED:-true}"; then
+    set -- "$@" "--enable-xml"
+else
+    set -- "$@" "--disable-xml"
+fi
+
 if [ -n "${MOCHAD_XML_PORT:-}" ]; then
     set -- "$@" "--xml-port" "$MOCHAD_XML_PORT"
+fi
+
+if mochad_bool_enabled "${MOCHAD_OPENREMOTE_ENABLED:-true}"; then
+    set -- "$@" "--enable-openremote"
+else
+    set -- "$@" "--disable-openremote"
 fi
 
 if [ -n "${MOCHAD_OPENREMOTE_PORT:-}" ]; then

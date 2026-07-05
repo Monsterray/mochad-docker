@@ -44,7 +44,9 @@ MOCHAD_FOREGROUND=true
 MOCHAD_RAW_DATA=false
 MOCHAD_BIND=0.0.0.0
 MOCHAD_PORT=1099
+MOCHAD_XML_ENABLED=true
 MOCHAD_XML_PORT=1100
+MOCHAD_OPENREMOTE_ENABLED=true
 MOCHAD_OPENREMOTE_PORT=1101
 MOCHAD_SHOW_VERSION=false
 MOCHAD_SHOW_HELP=false
@@ -59,9 +61,37 @@ passes `--help`; those are mainly useful for one-off diagnostics because
 upstream `mochad` arguments; do not put secrets in it.
 
 `MOCHAD_BIND`, `MOCHAD_PORT`, `MOCHAD_XML_PORT`, and
-`MOCHAD_OPENREMOTE_PORT` map to `mochad-redux` listener options. Defaults
-preserve the historical behavior: `0.0.0.0:1099`, `0.0.0.0:1100`, and
-`0.0.0.0:1101`. Ports must be distinct TCP ports from `1` to `65535`.
+`MOCHAD_OPENREMOTE_PORT` map to `mochad-redux` listener options.
+`MOCHAD_XML_ENABLED` and `MOCHAD_OPENREMOTE_ENABLED` can disable the legacy
+auxiliary listeners independently. Defaults preserve the historical behavior:
+`0.0.0.0:1099`, `0.0.0.0:1100`, and `0.0.0.0:1101`. Enabled listener ports
+must be distinct TCP ports from `1` to `65535`.
+
+For IPv6, set `MOCHAD_BIND=::` for all IPv6 interfaces or `MOCHAD_BIND=::1`
+for IPv6 loopback. `mochad-redux` asks the operating system for dual-stack
+IPv4-mapped behavior when binding to IPv6, but host kernel policy may still
+restrict this.
+
+Example:
+
+```sh
+MOCHAD_BIND=:: docker compose up
+```
+
+This configures the listener inside the container. Publishing the service on a
+host IPv6 address also depends on Docker daemon IPv6 support and the host
+network configuration. If IPv6 publishing is not enabled on the host, keep
+`MOCHAD_BIND=0.0.0.0` for IPv4-only deployments.
+
+Startup logs report each listener separately, including address family and
+dual-stack status:
+
+```text
+[TCP] listener ready name=main address=:: port=1099 family=ipv6 dual_stack=enabled
+```
+
+If the log reports `dual_stack=failed`, the container or host kernel did not
+allow IPv4-mapped IPv6 sockets even though `mochad-redux` requested them.
 
 ## Local Build
 

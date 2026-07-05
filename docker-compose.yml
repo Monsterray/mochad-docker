@@ -31,14 +31,16 @@ services:
       MOCHAD_RAW_DATA: ${MOCHAD_RAW_DATA:-false}
       MOCHAD_BIND: ${MOCHAD_BIND:-0.0.0.0}
       MOCHAD_PORT: ${MOCHAD_PORT:-1099}
+      MOCHAD_XML_ENABLED: ${MOCHAD_XML_ENABLED:-true}
       MOCHAD_XML_PORT: ${MOCHAD_XML_PORT:-1100}
+      MOCHAD_OPENREMOTE_ENABLED: ${MOCHAD_OPENREMOTE_ENABLED:-true}
       MOCHAD_OPENREMOTE_PORT: ${MOCHAD_OPENREMOTE_PORT:-1101}
       MOCHAD_SHOW_VERSION: ${MOCHAD_SHOW_VERSION:-false}
       MOCHAD_SHOW_HELP: ${MOCHAD_SHOW_HELP:-false}
       MOCHAD_ARGS: ${MOCHAD_ARGS:-}
 
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 $${MOCHAD_PORT:-1099} || exit 1"]
+      test: ["CMD-SHELL", "bind=\"$${MOCHAD_BIND:-0.0.0.0}\"; case \"$$bind\" in 0.0.0.0) health_host=127.0.0.1 ;; ::) health_host=::1 ;; *) health_host=\"$$bind\" ;; esac; nc -z \"$$health_host\" \"$${MOCHAD_PORT:-1099}\" || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
