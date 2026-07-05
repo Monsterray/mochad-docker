@@ -29,6 +29,8 @@ Packaging version: `0.1.0`
   needs access to the USB bus where the controller appears, so the compose file
   maps `/dev/bus/usb:/dev/bus/usb` and runs the container with elevated USB
   permissions.
+- The container intentionally runs as root for now because direct USB
+  passthrough and legacy device access are the primary runtime requirements.
 - The compose service name should remain `mochad` so the bridge can use
   `MOCHAD_HOST=mochad`.
 
@@ -117,6 +119,24 @@ MOCHAD_REF=develop
 The Dockerfile clones the source inside the build container, so
 `MOCHAD_REPOSITORY` should be a Git URL that the Docker builder can reach.
 `MOCHAD_REF` may be a branch, tag, or commit SHA.
+
+## Docker Image
+
+The compose file builds the image locally for development and hardware testing.
+When published images are enabled later, the intended image name is:
+
+```text
+ghcr.io/monsterray/mochad-docker
+```
+
+To use a published image in the future, replace the compose `build:` block with
+an `image:` reference such as:
+
+```yaml
+image: ghcr.io/monsterray/mochad-docker:0.1.0
+```
+
+No GitHub Container Registry publishing workflow is enabled yet.
 
 ## Standalone Run
 

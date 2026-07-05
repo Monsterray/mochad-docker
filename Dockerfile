@@ -51,7 +51,7 @@ ARG IMAGE_VERSION=0.1.0
 ARG MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git
 ARG MOCHAD_REF=develop
 
-LABEL org.opencontainers.image.title="mochad"
+LABEL org.opencontainers.image.title="mochad-docker"
 LABEL org.opencontainers.image.description="X10 CM15A CM19A USB automation daemon"
 LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
 LABEL org.opencontainers.image.created="${BUILD_DATE}"

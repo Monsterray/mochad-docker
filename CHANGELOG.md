@@ -15,6 +15,7 @@ file.
   OpenRemote listeners while preserving default legacy compatibility.
 - Basic GitHub Actions CI for Compose validation and Docker builds from
   upstream `mochad` and `Monsterray/mochad-redux`.
+- Docker image publishing readiness documentation and ignore-file hygiene.
 
 ## [0.1.0] - Unreleased
 
