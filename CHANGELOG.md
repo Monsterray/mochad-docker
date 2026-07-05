@@ -13,6 +13,8 @@ file.
 - Debug compose file for attached troubleshooting.
 - Environment variables to independently enable or disable the XML and
   OpenRemote listeners while preserving default legacy compatibility.
+- Basic GitHub Actions CI for Compose validation and Docker builds from
+  upstream `mochad` and `Monsterray/mochad-redux`.
 
 ## [0.1.0] - Unreleased
 

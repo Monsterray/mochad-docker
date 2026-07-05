@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  docker:
+    name: Compose and Docker builds
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Validate Docker Compose
+        run: docker compose config
+
+      - name: Build image from upstream mochad
+        run: |
+          docker build \
+            --pull \
+            --build-arg MOCHAD_REPOSITORY=https://github.com/sigmdel/mochad.git \
+            --build-arg MOCHAD_REF=master \
+            --tag x10-mochad:ci-upstream \
+            .
+
+      - name: Build image from Monsterray mochad-redux
+        run: |
+          docker build \
+            --pull \
+            --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
+            --build-arg MOCHAD_REF=develop \
+            --tag x10-mochad:ci-redux \
+            .
