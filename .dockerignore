@@ -7,6 +7,7 @@ README.md
 .env.*
 !.env.example
 docker-compose.override.yml
+tests/
 CHANGELOG.md
 CONTRIBUTING.md
 LICENSE.md

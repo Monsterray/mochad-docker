@@ -12,13 +12,12 @@ services:
     hostname: mochad
     restart: unless-stopped
 
-    devices:
+    volumes:
       - /dev/bus/usb:/dev/bus/usb
+      - mochad-config:/config
 
-    privileged: true
-    cap_add:
-      - SYS_ADMIN
-      - SYS_RAWIO
+    device_cgroup_rules:
+      - "c 189:* rwm"
 
     ports:
       - "${MOCHAD_PORT:-1099}:${MOCHAD_PORT:-1099}" # Main tcp port
@@ -26,7 +25,11 @@ services:
       # - "${MOCHAD_OPENREMOTE_PORT:-1101}:${MOCHAD_OPENREMOTE_PORT:-1101}" # optional OpenRemote socket
 
     environment:
+      PUID: ${PUID:-911}
+      PGID: ${PGID:-911}
+      USB_GID: ${USB_GID:-911}
       TZ: ${TZ:-America/Los_Angeles}
+      UMASK: ${UMASK:-022}
       MOCHAD_FOREGROUND: ${MOCHAD_FOREGROUND:-true}
       MOCHAD_RAW_DATA: ${MOCHAD_RAW_DATA:-false}
       MOCHAD_BIND: ${MOCHAD_BIND:-0.0.0.0}
@@ -45,3 +48,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+volumes:
+  mochad-config:

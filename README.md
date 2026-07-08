@@ -23,14 +23,21 @@ Packaging version: `0.1.0`
 - `mochad-redux` listens on TCP port `1099` by default.
 - It also opens auxiliary ports `1100` and `1101` for legacy client
   compatibility by default.
+- Port `1100` is the legacy Flash XMLSocket-compatible listener. It changes
+  event framing from newline-delimited to NUL-delimited for legacy clients, but
+  it does not provide structured XML. New integrations, including
+  `mochad-mqtt-bridge`, should use the main listener on port `1099`.
 - Exposes a health check that verifies the TCP listener is accepting
   connections.
 - Requires USB access to the X10 controller from the host. For a CM19A, Docker
-  needs access to the USB bus where the controller appears, so the compose file
-  maps `/dev/bus/usb:/dev/bus/usb` and runs the container with elevated USB
-  permissions.
-- The container intentionally runs as root for now because direct USB
-  passthrough and legacy device access are the primary runtime requirements.
+  needs access to the USB bus where the controller appears. The compose file
+  bind mounts `/dev/bus/usb:/dev/bus/usb` and grants USB character devices with
+  `device_cgroup_rules: ["c 189:* rwm"]`.
+- The container starts as root only long enough to prepare `/config`, create the
+  runtime user/group, inspect USB node permissions, and verify non-root USB
+  access. It then drops privileges before starting `mochad`.
+- Application binaries remain owned by `root:root`; only `/config` is owned by
+  `PUID:PGID`.
 - The compose service name should remain `mochad` so the bridge can use
   `MOCHAD_HOST=mochad`.
 
@@ -40,6 +47,10 @@ Runtime environment variables:
 
 ```text
 TZ=America/Los_Angeles
+PUID=911
+PGID=911
+USB_GID=911
+UMASK=022
 MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git
 MOCHAD_REF=develop
 MOCHAD_FOREGROUND=true
@@ -54,6 +65,25 @@ MOCHAD_SHOW_VERSION=false
 MOCHAD_SHOW_HELP=false
 MOCHAD_ARGS=
 ```
+
+`PUID`, `PGID`, `TZ`, and `UMASK` use the same convention as the MQTT bridge
+image. Defaults are `911`, `911`, `UTC` in the image, and `022`.
+
+`USB_GID` is separate from `PGID`. Set it to the numeric group ID that owns the
+host USB device nodes. A recommended host setup is:
+
+```sh
+sudo groupadd --system x10
+getent group x10
+```
+
+Configure host udev rules so X10 USB nodes are owned by `root:x10` with mode
+`0660`, then set `USB_GID` to the numeric `x10` group ID. The native
+`mochad-redux` udev rules use that model.
+
+If Compose `user:` is set, Docker bypasses the entrypoint's `PUID`/`PGID`
+initialization. In that mode, pre-own mounted volumes and add the USB group
+explicitly with `group_add`.
 
 `MOCHAD_FOREGROUND=true` passes `-d`, which keeps `mochad` in the foreground so
 Docker can supervise it. `MOCHAD_RAW_DATA=true` passes `--raw-data`.
@@ -151,6 +181,10 @@ nc -vz localhost 1099
 ```
 
 Expected result: `nc` reports that the connection to port `1099` succeeded.
+
+At startup, the container prints the mapped `/dev/bus/usb` device nodes and
+fails before launching `mochad` if the non-root runtime user cannot read and
+write them.
 
 ## Debug Run
 

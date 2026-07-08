@@ -66,7 +66,9 @@ LABEL org.opencontainers.image.base.version="${MOCHAD_REF}"
 
 RUN apk add --no-cache \
     libusb-dev \
+    su-exec \
     tini \
+    tzdata \
     netcat-openbsd
 
 COPY --from=builder \
@@ -85,8 +87,14 @@ COPY --from=builder \
 EXPOSE 1099/tcp 1100/tcp 1101/tcp
 
 COPY mochad-entrypoint.sh /usr/local/bin/mochad-entrypoint.sh
-RUN chmod +x /usr/local/bin/mochad-entrypoint.sh
+RUN chmod +x /usr/local/bin/mochad-entrypoint.sh \
+    && mkdir -p /config
 
+ENV PUID=911
+ENV PGID=911
+ENV USB_GID=911
+ENV TZ=UTC
+ENV UMASK=022
 ENV MOCHAD_FOREGROUND=true
 ENV MOCHAD_RAW_DATA=false
 ENV MOCHAD_BIND=0.0.0.0
@@ -98,6 +106,8 @@ ENV MOCHAD_OPENREMOTE_PORT=1101
 ENV MOCHAD_SHOW_VERSION=false
 ENV MOCHAD_SHOW_HELP=false
 ENV MOCHAD_ARGS=""
+
+VOLUME ["/config"]
 
 HEALTHCHECK --interval=30s \
             --timeout=5s \

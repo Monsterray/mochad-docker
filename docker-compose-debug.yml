@@ -10,13 +10,21 @@ services:
     image: x10-mochad:local
     container_name: mochad-debug
 
-    privileged: true
     network_mode: host
 
-    devices:
+    volumes:
       - /dev/bus/usb:/dev/bus/usb
+      - mochad-config:/config
+
+    device_cgroup_rules:
+      - "c 189:* rwm"
 
     environment:
+      PUID: ${PUID:-911}
+      PGID: ${PGID:-911}
+      USB_GID: ${USB_GID:-911}
+      TZ: ${TZ:-America/Los_Angeles}
+      UMASK: ${UMASK:-022}
       MOCHAD_FOREGROUND: ${MOCHAD_FOREGROUND:-true}
       MOCHAD_RAW_DATA: ${MOCHAD_RAW_DATA:-true}
       MOCHAD_BIND: ${MOCHAD_BIND:-0.0.0.0}
@@ -33,3 +41,6 @@ services:
 
     tty: true
     stdin_open: true
+
+volumes:
+  mochad-config:
