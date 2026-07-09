@@ -92,7 +92,8 @@ RUN chmod +x /usr/local/bin/mochad-entrypoint.sh \
 
 ENV PUID=911
 ENV PGID=911
-ENV USB_GID=911
+ENV USB_GID=auto
+ENV USB_DEBUG=false
 ENV TZ=UTC
 ENV UMASK=022
 ENV MOCHAD_FOREGROUND=true

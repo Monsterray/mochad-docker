@@ -49,7 +49,8 @@ Runtime environment variables:
 TZ=America/Los_Angeles
 PUID=911
 PGID=911
-USB_GID=911
+USB_GID=auto
+USB_DEBUG=false
 UMASK=022
 MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git
 MOCHAD_REF=develop
@@ -69,8 +70,11 @@ MOCHAD_ARGS=
 `PUID`, `PGID`, `TZ`, and `UMASK` use the same convention as the MQTT bridge
 image. Defaults are `911`, `911`, `UTC` in the image, and `022`.
 
-`USB_GID` is separate from `PGID`. Set it to the numeric group ID that owns the
-host USB device nodes. A recommended host setup is:
+`USB_GID` is separate from `PGID`. The default `USB_GID=auto` detects the
+numeric group ID from the detected CM15A/CM19A USB device node. You can also set
+it explicitly to the numeric group ID that owns the host USB device nodes.
+
+A recommended host setup is:
 
 ```sh
 sudo groupadd --system x10
@@ -78,8 +82,14 @@ getent group x10
 ```
 
 Configure host udev rules so X10 USB nodes are owned by `root:x10` with mode
-`0660`, then set `USB_GID` to the numeric `x10` group ID. The native
-`mochad-redux` udev rules use that model.
+`0660`. With `USB_GID=auto`, the container reads the numeric `x10` group ID
+from the device node. To set it explicitly, use the numeric value from
+`getent group x10`; for example, `USB_GID=1005`. The native `mochad-redux` udev
+rules use that model.
+
+Set `USB_DEBUG=true` to print every mapped `/dev/bus/usb` node during startup.
+By default, startup logs show only the detected X10 controller node to avoid
+noisy restart logs.
 
 If Compose `user:` is set, Docker bypasses the entrypoint's `PUID`/`PGID`
 initialization. In that mode, pre-own mounted volumes and add the USB group

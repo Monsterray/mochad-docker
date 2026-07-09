@@ -27,7 +27,8 @@ services:
     environment:
       PUID: ${PUID:-911}
       PGID: ${PGID:-911}
-      USB_GID: ${USB_GID:-911}
+      USB_GID: ${USB_GID:-auto}
+      USB_DEBUG: ${USB_DEBUG:-false}
       TZ: ${TZ:-America/Los_Angeles}
       UMASK: ${UMASK:-022}
       MOCHAD_FOREGROUND: ${MOCHAD_FOREGROUND:-true}

@@ -3,7 +3,8 @@ set -eu
 
 PUID="${PUID:-911}"
 PGID="${PGID:-911}"
-USB_GID="${USB_GID:-911}"
+USB_GID="${USB_GID:-auto}"
+USB_DEBUG="${USB_DEBUG:-false}"
 TZ="${TZ:-UTC}"
 UMASK="${UMASK:-022}"
 
@@ -38,13 +39,18 @@ name_for_uid() {
 }
 
 prepare_runtime_user() {
-    if ! is_number "$PUID" || ! is_number "$PGID" || ! is_number "$USB_GID"; then
-        echo "[STARTUP] PUID, PGID, and USB_GID must be numeric" >&2
+    if ! is_number "$PUID" || ! is_number "$PGID"; then
+        echo "[STARTUP] PUID and PGID must be numeric" >&2
+        exit 64
+    fi
+
+    if ! is_number "$USB_GID"; then
+        echo "[USB] USB_GID must be numeric or auto" >&2
         exit 64
     fi
 
     if [ "$PUID" = "0" ] || [ "$PGID" = "0" ] || [ "$USB_GID" = "0" ]; then
-        echo "[STARTUP] PUID, PGID, and USB_GID must be non-root IDs" >&2
+        echo "[STARTUP] PUID, PGID, and resolved USB_GID must be non-root IDs" >&2
         exit 64
     fi
 
@@ -90,7 +96,7 @@ prepare_runtime_user() {
     echo "[USB] runtime user uid=${PUID} gid=${PGID} supplementary_usb_gid=${USB_GID}"
 }
 
-inspect_usb_nodes() {
+detect_x10_nodes() {
     if [ ! -d /dev/bus/usb ]; then
         echo "[USB] /dev/bus/usb is not mounted; bind mount /dev/bus/usb and allow cgroup rule c 189:* rwm" >&2
         exit 66
@@ -102,10 +108,12 @@ inspect_usb_nodes() {
         exit 66
     fi
 
-    echo "[USB] mapped USB device nodes:"
-    printf '%s\n' "$usb_nodes" | while IFS= read -r node; do
-        ls -l "$node"
-    done
+    if mochad_bool_enabled "$USB_DEBUG"; then
+        echo "[USB] mapped USB device nodes:"
+        printf '%s\n' "$usb_nodes" | while IFS= read -r node; do
+            ls -l "$node"
+        done
+    fi
 
     x10_nodes=""
     for sysdev in /sys/bus/usb/devices/*; do
@@ -138,7 +146,23 @@ inspect_usb_nodes() {
         [ -n "$node" ] || continue
         ls -l "$node"
     done
+}
 
+resolve_usb_gid() {
+    case "$(printf '%s' "$USB_GID" | tr '[:upper:]' '[:lower:]')" in
+        ''|auto)
+            first_node="$(printf '%s' "$x10_nodes" | awk 'NF { print; exit }')"
+            if [ -z "$first_node" ]; then
+                echo "[USB] cannot auto-detect USB_GID because no X10 controller node was found" >&2
+                exit 66
+            fi
+            USB_GID="$(stat -c '%g' "$first_node")"
+            echo "[USB] auto-detected USB_GID=${USB_GID} from ${first_node}"
+            ;;
+    esac
+}
+
+validate_usb_access() {
     if [ "$(id -u)" = "0" ]; then
         # Validate the exact user/group set the daemon will run with. This
         # catches host udev rules that forgot root:x10 ownership or 0660 mode.
@@ -152,8 +176,10 @@ inspect_usb_nodes() {
     echo "[USB] non-root USB access validation passed"
 }
 
+detect_x10_nodes
+resolve_usb_gid
 prepare_runtime_user
-inspect_usb_nodes
+validate_usb_access
 
 MOCHAD_COMMAND="${MOCHAD_COMMAND:-/usr/local/bin/mochad}"
 
