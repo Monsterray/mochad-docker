@@ -12,15 +12,50 @@ permissions:
 
 jobs:
   docker:
-    name: Compose and Docker builds
+    name: Compose, labels, and multi-platform Docker builds
     runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Validate Docker Compose
         run: docker compose config
+
+      - name: Prepare build metadata
+        id: meta
+        env:
+          MOCHAD_REPOSITORY: https://github.com/Monsterray/mochad-redux.git
+          MOCHAD_REF: develop
+        run: |
+          set -eu
+          created="$(git show -s --format=%cI "$GITHUB_SHA")"
+          alpine_digest="$(docker buildx imagetools inspect docker.io/library/alpine:3.22 --format '{{ .Digest }}')"
+          redux_dir="$(mktemp -d)"
+          git clone --depth 1 --branch "$MOCHAD_REF" "$MOCHAD_REPOSITORY" "$redux_dir"
+          redux_revision="$(git -C "$redux_dir" rev-parse HEAD)"
+          if [ -f "$redux_dir/VERSION" ]; then
+            redux_version="$(cat "$redux_dir/VERSION")"
+          else
+            redux_version="$(git -C "$redux_dir" describe --tags --always)"
+          fi
+          {
+            echo "created=$created"
+            echo "alpine_digest=$alpine_digest"
+            echo "redux_revision=$redux_revision"
+            echo "redux_version=$redux_version"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build image from upstream mochad
         run: |
@@ -28,6 +63,11 @@ jobs:
             --pull \
             --build-arg MOCHAD_REPOSITORY=https://github.com/sigmdel/mochad.git \
             --build-arg MOCHAD_REF=master \
+            --build-arg BUILD_DATE="${{ steps.meta.outputs.created }}" \
+            --build-arg VCS_REF="${GITHUB_SHA}" \
+            --build-arg ALPINE_DIGEST="${{ steps.meta.outputs.alpine_digest }}" \
+            --build-arg MOCHAD_REDUX_REVISION=unknown \
+            --build-arg MOCHAD_REDUX_VERSION=unknown \
             --tag x10-mochad:ci-upstream \
             .
 
@@ -37,5 +77,65 @@ jobs:
             --pull \
             --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
             --build-arg MOCHAD_REF=develop \
+            --build-arg BUILD_DATE="${{ steps.meta.outputs.created }}" \
+            --build-arg VCS_REF="${GITHUB_SHA}" \
+            --build-arg ALPINE_DIGEST="${{ steps.meta.outputs.alpine_digest }}" \
+            --build-arg MOCHAD_REDUX_REVISION="${{ steps.meta.outputs.redux_revision }}" \
+            --build-arg MOCHAD_REDUX_VERSION="${{ steps.meta.outputs.redux_version }}" \
             --tag x10-mochad:ci-redux \
             .
+
+      - name: Validate OCI labels
+        run: scripts/validate-image-labels.sh x10-mochad:ci-redux
+
+      - name: Build and smoke test each platform
+        env:
+          CREATED: ${{ steps.meta.outputs.created }}
+          ALPINE_DIGEST: ${{ steps.meta.outputs.alpine_digest }}
+          REDUX_REVISION: ${{ steps.meta.outputs.redux_revision }}
+          REDUX_VERSION: ${{ steps.meta.outputs.redux_version }}
+        run: |
+          set -eu
+          for platform in linux/amd64 linux/arm64; do
+            suffix="$(printf '%s' "$platform" | tr / -)"
+            tag="x10-mochad:ci-${suffix}"
+            docker buildx build \
+              --pull \
+              --platform "$platform" \
+              --load \
+              --build-arg BUILD_DATE="$CREATED" \
+              --build-arg VCS_REF="$GITHUB_SHA" \
+              --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
+              --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
+              --build-arg MOCHAD_REF=develop \
+              --build-arg MOCHAD_REDUX_REVISION="$REDUX_REVISION" \
+              --build-arg MOCHAD_REDUX_VERSION="$REDUX_VERSION" \
+              --tag "$tag" \
+              .
+            docker run --rm --platform "$platform" --entrypoint /usr/local/bin/mochad "$tag" --version
+            docker run --rm --platform "$platform" --entrypoint /usr/local/bin/mochad "$tag" --help
+          done
+
+      - name: Build combined OCI image index
+        env:
+          CREATED: ${{ steps.meta.outputs.created }}
+          ALPINE_DIGEST: ${{ steps.meta.outputs.alpine_digest }}
+          REDUX_REVISION: ${{ steps.meta.outputs.redux_revision }}
+          REDUX_VERSION: ${{ steps.meta.outputs.redux_version }}
+        run: |
+          docker buildx build \
+            --pull \
+            --platform linux/amd64,linux/arm64 \
+            --push \
+            --build-arg BUILD_DATE="$CREATED" \
+            --build-arg VCS_REF="$GITHUB_SHA" \
+            --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
+            --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
+            --build-arg MOCHAD_REF=develop \
+            --build-arg MOCHAD_REDUX_REVISION="$REDUX_REVISION" \
+            --build-arg MOCHAD_REDUX_VERSION="$REDUX_VERSION" \
+            --tag localhost:5000/x10-mochad:ci-index \
+            .
+
+      - name: Validate combined OCI image index
+        run: scripts/validate-oci-index.sh localhost:5000/x10-mochad:ci-index
