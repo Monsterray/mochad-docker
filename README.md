@@ -18,6 +18,28 @@ can build a different repository, branch, tag, or commit by setting
 
 Packaging version: `0.1.0`
 
+## Image Metadata
+
+OCI labels describe the Docker packaging repository, not the embedded daemon:
+
+- `org.opencontainers.image.version` is the `mochad-docker` packaging version.
+- `org.opencontainers.image.revision` is the `mochad-docker` Git commit.
+- `org.opencontainers.image.created` is derived from the packaging commit date.
+- `org.opencontainers.image.base.name` and
+  `org.opencontainers.image.base.digest` identify the Alpine base image.
+
+The embedded daemon is tracked separately with custom labels:
+
+- `io.github.monsterray.mochad-redux.repository`
+- `io.github.monsterray.mochad-redux.revision`
+- `io.github.monsterray.mochad-redux.version`
+
+CI validates these labels with `docker image inspect`. Multi-platform CI builds
+`linux/amd64` and `linux/arm64`, runs `mochad --version` and `mochad --help` on
+each architecture, and verifies the combined OCI image index contains both
+platform manifests. QEMU validation proves startup diagnostics execute on the
+target architecture; it does not validate USB hardware behavior.
+
 ## Runtime Contract
 
 - `mochad-redux` listens on TCP port `1099` by default.
@@ -146,6 +168,8 @@ To test a specific branch of `mochad-redux`, build with:
 ```sh
 MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
 MOCHAD_REF=develop \
+BUILD_DATE="$(git show -s --format=%cI HEAD)" \
+VCS_REF="$(git rev-parse HEAD)" \
 docker compose build --no-cache
 ```
 
