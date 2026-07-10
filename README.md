@@ -158,7 +158,10 @@ MOCHAD_REF=develop
 
 The Dockerfile clones the source inside the build container, so
 `MOCHAD_REPOSITORY` should be a Git URL that the Docker builder can reach.
-`MOCHAD_REF` may be a branch, tag, or commit SHA.
+`MOCHAD_REF` may be a branch, tag, or commit SHA. `MOCHAD_COMMIT` is a
+deprecated compatibility alias and is only used when `MOCHAD_REF` is not set.
+Use `docker compose build --no-cache` when changing refs so Docker does not
+reuse an older clone layer.
 
 ## Docker Image
 

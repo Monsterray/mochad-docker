@@ -22,13 +22,13 @@ RUN apk add --no-cache \
 WORKDIR /src
 
 ARG MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git
-ARG MOCHAD_REF=develop
+ARG MOCHAD_REF
 # Deprecated compatibility alias. Prefer MOCHAD_REF.
-ARG MOCHAD_COMMIT=develop
+ARG MOCHAD_COMMIT
 
 RUN set -eux; \
     git clone "${MOCHAD_REPOSITORY}" .; \
-    checkout_ref="${MOCHAD_REF:-${MOCHAD_COMMIT}}"; \
+    checkout_ref="${MOCHAD_REF:-${MOCHAD_COMMIT:-develop}}"; \
     git checkout "${checkout_ref}"; \
     git rev-parse HEAD > /tmp/mochad-source-revision
 
