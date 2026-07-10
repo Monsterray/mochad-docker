@@ -205,6 +205,11 @@ image: ghcr.io/monsterray/mochad-docker:0.1.0
 
 No GitHub Container Registry publishing workflow is enabled yet.
 
+Tag release builds publish `linux/amd64` and `linux/arm64` images to GHCR with
+BuildKit SBOM and max-level provenance attestations. Pull requests build and
+validate the image without publishing. Release evidence requirements are listed
+in [RELEASE_EVIDENCE.md](RELEASE_EVIDENCE.md).
+
 ## Standalone Run
 
 ```sh
@@ -234,5 +239,8 @@ raw mochad logs are easier to inspect.
 
 ## License
 
-The Docker packaging is MIT licensed. Built images contain upstream `mochad`,
-which is GPL-2.0 licensed. See [LICENSE.md](LICENSE.md).
+The Docker packaging is MIT licensed. Built images contain `mochad-redux`,
+which is GPL-3.0-or-later licensed after the audited source-lineage closure.
+Images install packaging license files under
+`/usr/share/licenses/mochad-docker/` and daemon license, notice, and lineage
+files under `/usr/share/licenses/mochad-redux/`. See [LICENSE.md](LICENSE.md).

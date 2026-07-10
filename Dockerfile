@@ -39,6 +39,17 @@ RUN ./autogen.sh
 RUN make
 RUN make DESTDIR=/tmp/install install
 
+RUN set -eux; \
+    mkdir -p /tmp/runtime-licenses/mochad-redux; \
+    for file in COPYING NOTICE docs/source-lineage.md; do \
+        if [ -f "$file" ]; then \
+            mkdir -p "/tmp/runtime-licenses/mochad-redux/$(dirname "$file")"; \
+            cp "$file" "/tmp/runtime-licenses/mochad-redux/$file"; \
+        else \
+            printf 'Source checkout did not provide %s. Use audited mochad-redux source for release images.\n' "$file" > "/tmp/runtime-licenses/mochad-redux/$(basename "$file").missing"; \
+        fi; \
+    done
+
 
 ###############################################################################
 # Runtime Stage
@@ -64,7 +75,7 @@ LABEL org.opencontainers.image.vendor="MQTT Mochad Bridge contributors"
 LABEL org.opencontainers.image.url="https://github.com/Monsterray/mochad-docker"
 LABEL org.opencontainers.image.source="https://github.com/Monsterray/mochad-docker"
 LABEL org.opencontainers.image.documentation="https://github.com/Monsterray/mochad-docker"
-LABEL org.opencontainers.image.licenses="GPL-2.0"
+LABEL org.opencontainers.image.licenses="MIT AND GPL-3.0-or-later"
 LABEL org.opencontainers.image.base.name="${ALPINE_IMAGE}"
 LABEL org.opencontainers.image.base.digest="${ALPINE_DIGEST}"
 LABEL io.github.monsterray.mochad-redux.repository="${MOCHAD_REPOSITORY}"
@@ -86,6 +97,12 @@ COPY --from=builder \
 COPY --from=builder \
     /src/udev/91-usb-x10-controllers.rules \
     /usr/share/mochad/91-usb-x10-controllers.rules
+
+RUN mkdir -p /usr/share/licenses/mochad-docker /usr/share/licenses/mochad-redux
+COPY LICENSE.md /usr/share/licenses/mochad-docker/LICENSE.md
+COPY --from=builder \
+    /tmp/runtime-licenses/mochad-redux/ \
+    /usr/share/licenses/mochad-redux/
 #
 # COPY --from=builder \
 #     /src/systemd/mochad.service \

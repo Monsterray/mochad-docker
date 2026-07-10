@@ -40,3 +40,13 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertNotIn("privileged: true", compose)
         self.assertNotIn("SYS_ADMIN", compose)
         self.assertNotIn("SYS_RAWIO", compose)
+
+    def test_dockerfile_installs_separate_license_trees(self) -> None:
+        dockerfile = (ROOT / "Dockerfile").read_text()
+
+        self.assertIn("/usr/share/licenses/mochad-docker", dockerfile)
+        self.assertIn("/usr/share/licenses/mochad-redux", dockerfile)
+        self.assertIn("COPY LICENSE.md /usr/share/licenses/mochad-docker/LICENSE.md", dockerfile)
+        self.assertIn("/tmp/runtime-licenses/mochad-redux/", dockerfile)
+        self.assertIn("COPYING NOTICE docs/source-lineage.md", dockerfile)
+        self.assertIn('org.opencontainers.image.licenses="MIT AND GPL-3.0-or-later"', dockerfile)
