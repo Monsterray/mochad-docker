@@ -7,6 +7,7 @@ services:
       args:
         MOCHAD_REPOSITORY: ${MOCHAD_REPOSITORY:-https://github.com/Monsterray/mochad-redux.git}
         MOCHAD_REF: ${MOCHAD_REF:-develop}
+        ALPINE_BASE_IMAGE: ${ALPINE_BASE_IMAGE:-alpine:3.22}
     image: x10-mochad:local
     container_name: mochad-debug
 

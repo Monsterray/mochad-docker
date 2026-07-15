@@ -24,11 +24,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Run packaging unit tests
+        run: python -m unittest discover -s tests -v
+
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Validate Docker Compose
         run: docker compose config
@@ -65,6 +73,7 @@ jobs:
             --build-arg MOCHAD_REF=master \
             --build-arg BUILD_DATE="${{ steps.meta.outputs.created }}" \
             --build-arg VCS_REF="${GITHUB_SHA}" \
+            --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg ALPINE_DIGEST="${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg MOCHAD_REDUX_REVISION=unknown \
             --build-arg MOCHAD_REDUX_VERSION=unknown \
@@ -76,12 +85,14 @@ jobs:
           docker build \
             --pull \
             --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
-            --build-arg MOCHAD_REF=develop \
+            --build-arg MOCHAD_REF="${{ steps.meta.outputs.redux_revision }}" \
             --build-arg BUILD_DATE="${{ steps.meta.outputs.created }}" \
             --build-arg VCS_REF="${GITHUB_SHA}" \
+            --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg ALPINE_DIGEST="${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg MOCHAD_REDUX_REVISION="${{ steps.meta.outputs.redux_revision }}" \
             --build-arg MOCHAD_REDUX_VERSION="${{ steps.meta.outputs.redux_version }}" \
+            --build-arg REQUIRE_AUDITED_SOURCE=true \
             --tag x10-mochad:ci-redux \
             .
 
@@ -105,11 +116,13 @@ jobs:
               --load \
               --build-arg BUILD_DATE="$CREATED" \
               --build-arg VCS_REF="$GITHUB_SHA" \
+              --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
               --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
               --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
-              --build-arg MOCHAD_REF=develop \
+              --build-arg MOCHAD_REF="$REDUX_REVISION" \
               --build-arg MOCHAD_REDUX_REVISION="$REDUX_REVISION" \
               --build-arg MOCHAD_REDUX_VERSION="$REDUX_VERSION" \
+              --build-arg REQUIRE_AUDITED_SOURCE=true \
               --tag "$tag" \
               .
             docker run --rm --platform "$platform" --entrypoint /usr/local/bin/mochad "$tag" --version
@@ -129,11 +142,13 @@ jobs:
             --push \
             --build-arg BUILD_DATE="$CREATED" \
             --build-arg VCS_REF="$GITHUB_SHA" \
+            --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
             --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
             --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
-            --build-arg MOCHAD_REF=develop \
+            --build-arg MOCHAD_REF="$REDUX_REVISION" \
             --build-arg MOCHAD_REDUX_REVISION="$REDUX_REVISION" \
             --build-arg MOCHAD_REDUX_VERSION="$REDUX_VERSION" \
+            --build-arg REQUIRE_AUDITED_SOURCE=true \
             --tag localhost:5000/x10-mochad:ci-index \
             .
 

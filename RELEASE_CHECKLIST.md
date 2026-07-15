@@ -4,7 +4,7 @@ Use this checklist before publishing a GitHub release or Docker image.
 
 ## Version
 
-- [ ] Update Docker `IMAGE_VERSION`.
+- [ ] Confirm the release tag and Docker `IMAGE_VERSION` are the same version.
 - [ ] Update README version badge.
 - [ ] Update `CHANGELOG.md`.
 - [ ] Tag the release with the same version.
@@ -13,6 +13,9 @@ Use this checklist before publishing a GitHub release or Docker image.
 
 - [ ] Run `docker compose config`.
 - [ ] Build the Docker image.
+- [ ] Record the resolved `mochad-redux` commit SHA and version.
+- [ ] Record the resolved Alpine digest and confirm it is the Dockerfile base
+  image input, not only an OCI label.
 - [ ] Confirm `/usr/share/licenses/mochad-docker/LICENSE.md` is present.
 - [ ] Confirm `/usr/share/licenses/mochad-redux/COPYING` is present for release images.
 - [ ] Confirm `/usr/share/licenses/mochad-redux/NOTICE` is present for release images.
@@ -25,6 +28,7 @@ Use this checklist before publishing a GitHub release or Docker image.
 ## Publishing
 
 - [ ] Confirm Docker image labels are correct.
+- [ ] Confirm the embedded daemon revision label matches the compiled source.
 - [ ] Confirm BuildKit SBOM attestation is attached.
 - [ ] Confirm BuildKit max-level provenance attestation is attached.
 - [ ] Confirm manifest index contains `linux/amd64` and `linux/arm64`.

@@ -5,6 +5,21 @@ file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Release builds now compile the exact resolved `mochad-redux` commit recorded
+  in OCI metadata and release evidence.
+- Release builds now use the exact Alpine digest recorded in OCI metadata.
+- CI now runs packaging unit tests and uses current Docker actions with Node 24
+  runtimes.
+- Release builds fail when required `mochad-redux` licensing and source-lineage
+  files are absent.
+
+### Changed
+
+- Runtime images install the `libusb` shared library instead of development
+  headers and build tooling.
+
 ### Added
 
 - Standalone Dockerfile for building and running upstream `mochad`.

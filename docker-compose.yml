@@ -10,9 +10,11 @@ services:
         BUILD_DATE: ${BUILD_DATE:-1970-01-01T00:00:00Z}
         VCS_REF: ${VCS_REF:-unknown}
         IMAGE_VERSION: ${IMAGE_VERSION:-0.1.0}
+        ALPINE_BASE_IMAGE: ${ALPINE_BASE_IMAGE:-alpine:3.22}
         ALPINE_DIGEST: ${ALPINE_DIGEST:-unknown}
         MOCHAD_REDUX_REVISION: ${MOCHAD_REDUX_REVISION:-unknown}
         MOCHAD_REDUX_VERSION: ${MOCHAD_REDUX_VERSION:-unknown}
+        REQUIRE_AUDITED_SOURCE: ${REQUIRE_AUDITED_SOURCE:-false}
     image: x10-mochad:local
     container_name: mochad
     hostname: mochad

@@ -50,3 +50,33 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertIn("/tmp/runtime-licenses/mochad-redux/", dockerfile)
         self.assertIn("COPYING NOTICE docs/source-lineage.md", dockerfile)
         self.assertIn('org.opencontainers.image.licenses="MIT AND GPL-3.0-or-later"', dockerfile)
+
+    def test_dockerfile_uses_a_runtime_libusb_package_and_configurable_base(self) -> None:
+        dockerfile = (ROOT / "Dockerfile").read_text()
+
+        self.assertIn("ARG ALPINE_BASE_IMAGE=alpine:3.22", dockerfile)
+        self.assertIn("FROM ${ALPINE_BASE_IMAGE} AS builder", dockerfile)
+        self.assertIn("FROM ${ALPINE_BASE_IMAGE}", dockerfile)
+        runtime_stage = dockerfile.split("# Runtime Stage", maxsplit=1)[1]
+        self.assertIn("    libusb", runtime_stage)
+        self.assertNotIn("libusb-dev", runtime_stage)
+
+    def test_release_workflow_builds_the_resolved_redux_revision(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "release-image.yml").read_text()
+
+        self.assertIn("MOCHAD_REF=${{ steps.release-meta.outputs.redux_sha }}", workflow)
+        self.assertIn("MOCHAD_REDUX_REVISION=${{ steps.release-meta.outputs.redux_sha }}", workflow)
+        self.assertIn("ALPINE_BASE_IMAGE=docker.io/library/alpine@${{ steps.release-meta.outputs.alpine_digest }}", workflow)
+        self.assertIn("REQUIRE_AUDITED_SOURCE=true", workflow)
+
+    def test_workflows_use_current_docker_action_majors(self) -> None:
+        workflows = (ROOT / ".github" / "workflows").glob("*.yml")
+        content = "\n".join(path.read_text() for path in workflows)
+
+        self.assertNotIn("docker/setup-qemu-action@v3", content)
+        self.assertNotIn("docker/setup-buildx-action@v3", content)
+        self.assertNotIn("docker/build-push-action@v6", content)
+        self.assertNotIn("docker/login-action@v3", content)
+        self.assertIn("docker/setup-qemu-action@v4", content)
+        self.assertIn("docker/setup-buildx-action@v4", content)
+        self.assertIn("docker/build-push-action@v7", content)

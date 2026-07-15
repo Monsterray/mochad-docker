@@ -14,6 +14,7 @@ Use only recorded output from CI, `docker buildx imagetools inspect`, and
 - `mochad-redux` version:
 - Alpine image:
 - Alpine digest:
+- Exact Alpine build input (`ALPINE_BASE_IMAGE`):
 - `linux/amd64` platform digest:
 - `linux/arm64` platform digest:
 - Manifest digest:

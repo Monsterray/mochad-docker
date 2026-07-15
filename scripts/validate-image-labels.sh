@@ -29,6 +29,7 @@ require_label io.github.monsterray.mochad-redux.version
 revision="$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')"
 redux_revision="$(docker image inspect "$image" --format '{{ index .Config.Labels "io.github.monsterray.mochad-redux.revision" }}')"
 base_name="$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.base.name" }}')"
+base_digest="$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.base.digest" }}')"
 
 case "$revision" in
     *[!0-9a-f]*|'')
@@ -51,6 +52,15 @@ case "$base_name" in
         ;;
     *)
         echo "FAIL: org.opencontainers.image.base.name must identify Alpine 3.22" >&2
+        exit 1
+        ;;
+esac
+
+case "$base_digest" in
+    sha256:*)
+        ;;
+    *)
+        echo "FAIL: org.opencontainers.image.base.digest must be a sha256 digest" >&2
         exit 1
         ;;
 esac

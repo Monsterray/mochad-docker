@@ -1,7 +1,8 @@
 ###############################################################################
 # Build Stage
 ###############################################################################
-FROM alpine:3.22 AS builder
+ARG ALPINE_BASE_IMAGE=alpine:3.22
+FROM ${ALPINE_BASE_IMAGE} AS builder
 
 LABEL stage="builder"
 
@@ -20,6 +21,7 @@ ARG MOCHAD_REF
 # Deprecated compatibility alias. Prefer MOCHAD_REF.
 ARG MOCHAD_COMMIT
 ARG MOCHAD_REDUX_REVISION
+ARG REQUIRE_AUDITED_SOURCE=false
 
 RUN set -eux; \
     git clone "${MOCHAD_REPOSITORY}" .; \
@@ -45,6 +47,9 @@ RUN set -eux; \
         if [ -f "$file" ]; then \
             mkdir -p "/tmp/runtime-licenses/mochad-redux/$(dirname "$file")"; \
             cp "$file" "/tmp/runtime-licenses/mochad-redux/$file"; \
+        elif [ "$REQUIRE_AUDITED_SOURCE" = "true" ]; then \
+            echo "Required audited source file is missing: $file" >&2; \
+            exit 1; \
         else \
             printf 'Source checkout did not provide %s. Use audited mochad-redux source for release images.\n' "$file" > "/tmp/runtime-licenses/mochad-redux/$(basename "$file").missing"; \
         fi; \
@@ -54,7 +59,7 @@ RUN set -eux; \
 ###############################################################################
 # Runtime Stage
 ###############################################################################
-FROM alpine:3.22
+FROM ${ALPINE_BASE_IMAGE}
 
 ARG BUILD_DATE=1970-01-01T00:00:00Z
 ARG VCS_REF=unknown
@@ -83,7 +88,7 @@ LABEL io.github.monsterray.mochad-redux.revision="${MOCHAD_REDUX_REVISION}"
 LABEL io.github.monsterray.mochad-redux.version="${MOCHAD_REDUX_VERSION}"
 
 RUN apk add --no-cache \
-    libusb-dev \
+    libusb \
     su-exec \
     tini \
     tzdata \
