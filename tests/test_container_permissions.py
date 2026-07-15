@@ -80,3 +80,5 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertIn("docker/setup-qemu-action@v4", content)
         self.assertIn("docker/setup-buildx-action@v4", content)
         self.assertIn("docker/build-push-action@v7", content)
+        self.assertNotIn("--format '{{ .Digest }}'", content)
+        self.assertIn("--format '{{ .Manifest.Digest }}'", content)

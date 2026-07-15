@@ -50,7 +50,7 @@ jobs:
           else
             version="0.0.0-pr"
           fi
-          alpine_digest="$(docker buildx imagetools inspect docker.io/library/alpine:3.22 --format '{{ .Digest }}')"
+          alpine_digest="$(docker buildx imagetools inspect docker.io/library/alpine:3.22 --format '{{ .Manifest.Digest }}')"
           redux_dir="$(mktemp -d)"
           git clone --depth 1 --branch "$MOCHAD_REF" "$MOCHAD_REPOSITORY" "$redux_dir"
           redux_sha="$(git -C "$redux_dir" rev-parse HEAD)"

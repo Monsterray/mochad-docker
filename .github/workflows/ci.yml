@@ -49,7 +49,7 @@ jobs:
         run: |
           set -eu
           created="$(git show -s --format=%cI "$GITHUB_SHA")"
-          alpine_digest="$(docker buildx imagetools inspect docker.io/library/alpine:3.22 --format '{{ .Digest }}')"
+          alpine_digest="$(docker buildx imagetools inspect docker.io/library/alpine:3.22 --format '{{ .Manifest.Digest }}')"
           redux_dir="$(mktemp -d)"
           git clone --depth 1 --branch "$MOCHAD_REF" "$MOCHAD_REPOSITORY" "$redux_dir"
           redux_revision="$(git -C "$redux_dir" rev-parse HEAD)"
