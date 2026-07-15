@@ -82,3 +82,5 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertIn("docker/build-push-action@v7", content)
         self.assertNotIn("--format '{{ .Digest }}'", content)
         self.assertIn("--format '{{ .Manifest.Digest }}'", content)
+        self.assertIn("--output type=oci,dest=/tmp/mochad-ci-index.tar", content)
+        self.assertNotIn("localhost:5000/x10-mochad:ci-index", content)

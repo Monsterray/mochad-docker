@@ -12,6 +12,8 @@ file.
 - Release builds now use the exact Alpine digest recorded in OCI metadata.
 - CI now runs packaging unit tests and uses current Docker actions with Node 24
   runtimes.
+- Multi-platform CI now validates an exported OCI archive without depending on
+  a local registry or loopback-network behavior.
 - Release builds fail when required `mochad-redux` licensing and source-lineage
   files are absent.
 

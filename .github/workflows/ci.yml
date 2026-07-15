@@ -14,12 +14,6 @@ jobs:
   docker:
     name: Compose, labels, and multi-platform Docker builds
     runs-on: ubuntu-latest
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -139,7 +133,7 @@ jobs:
           docker buildx build \
             --pull \
             --platform linux/amd64,linux/arm64 \
-            --push \
+            --output type=oci,dest=/tmp/mochad-ci-index.tar \
             --build-arg BUILD_DATE="$CREATED" \
             --build-arg VCS_REF="$GITHUB_SHA" \
             --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
@@ -149,8 +143,7 @@ jobs:
             --build-arg MOCHAD_REDUX_REVISION="$REDUX_REVISION" \
             --build-arg MOCHAD_REDUX_VERSION="$REDUX_VERSION" \
             --build-arg REQUIRE_AUDITED_SOURCE=true \
-            --tag localhost:5000/x10-mochad:ci-index \
             .
 
       - name: Validate combined OCI image index
-        run: scripts/validate-oci-index.sh localhost:5000/x10-mochad:ci-index
+        run: scripts/validate-oci-index.sh --archive /tmp/mochad-ci-index.tar
