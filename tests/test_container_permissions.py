@@ -93,6 +93,13 @@ class ContainerPermissionsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             archive_path = Path(temporary_directory) / "image.tar"
             blobs = {
+                "blobs/sha256/nested-index": {
+                    "schemaVersion": 2,
+                    "manifests": [
+                        {"digest": "sha256:amd64-manifest"},
+                        {"digest": "sha256:arm64-manifest"},
+                    ],
+                },
                 "blobs/sha256/amd64-manifest": {"config": {"digest": "sha256:amd64-config"}},
                 "blobs/sha256/arm64-manifest": {"config": {"digest": "sha256:arm64-config"}},
                 "blobs/sha256/amd64-config": {"os": "linux", "architecture": "amd64"},
@@ -101,8 +108,7 @@ class ContainerPermissionsTests(unittest.TestCase):
             index = {
                 "schemaVersion": 2,
                 "manifests": [
-                    {"digest": "sha256:amd64-manifest"},
-                    {"digest": "sha256:arm64-manifest"},
+                    {"digest": "sha256:nested-index"},
                 ],
             }
 
