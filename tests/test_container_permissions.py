@@ -1,5 +1,9 @@
+from io import BytesIO
 from pathlib import Path
+import json
 import subprocess
+import tarfile
+import tempfile
 import unittest
 
 
@@ -84,3 +88,36 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertIn("--format '{{ .Manifest.Digest }}'", content)
         self.assertIn("--output type=oci,dest=/tmp/mochad-ci-index.tar", content)
         self.assertNotIn("localhost:5000/x10-mochad:ci-index", content)
+
+    def test_oci_archive_validator_reads_platforms_from_image_configs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            archive_path = Path(temporary_directory) / "image.tar"
+            blobs = {
+                "blobs/sha256/amd64-manifest": {"config": {"digest": "sha256:amd64-config"}},
+                "blobs/sha256/arm64-manifest": {"config": {"digest": "sha256:arm64-config"}},
+                "blobs/sha256/amd64-config": {"os": "linux", "architecture": "amd64"},
+                "blobs/sha256/arm64-config": {"os": "linux", "architecture": "arm64"},
+            }
+            index = {
+                "schemaVersion": 2,
+                "manifests": [
+                    {"digest": "sha256:amd64-manifest"},
+                    {"digest": "sha256:arm64-manifest"},
+                ],
+            }
+
+            with tarfile.open(archive_path, "w") as archive:
+                for name, data in {"index.json": index, **blobs}.items():
+                    encoded = json.dumps(data).encode()
+                    member = tarfile.TarInfo(name)
+                    member.size = len(encoded)
+                    archive.addfile(member, fileobj=BytesIO(encoded))
+
+            result = subprocess.run(
+                [str(ROOT / "scripts" / "validate-oci-index.sh"), "--archive", str(archive_path)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertIn("PASS: OCI archive contains linux/amd64 and linux/arm64", result.stdout)
