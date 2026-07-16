@@ -5,22 +5,7 @@ file.
 
 ## [Unreleased]
 
-### Fixed
-
-- Release builds now compile the exact resolved `mochad-redux` commit recorded
-  in OCI metadata and release evidence.
-- Release builds now use the exact Alpine digest recorded in OCI metadata.
-- CI now runs packaging unit tests and uses current Docker actions with Node 24
-  runtimes.
-- Multi-platform CI now validates an exported OCI archive without depending on
-  a local registry or loopback-network behavior.
-- Release builds fail when required `mochad-redux` licensing and source-lineage
-  files are absent.
-
-### Changed
-
-- Runtime images install the `libusb` shared library instead of development
-  headers and build tooling.
+## [0.4.0] - Unreleased
 
 ### Added
 
@@ -33,7 +18,26 @@ file.
 - Basic GitHub Actions CI for Compose validation and Docker builds from
   upstream `mochad` and `Monsterray/mochad-redux`.
 - Docker image publishing readiness documentation and ignore-file hygiene.
+- The tag workflow is configured to create or update an idempotent GitHub
+  Release from this version's changelog section after the multi-platform image
+  is published.
 
-## [0.1.0] - Unreleased
+### Changed
 
-- First release candidate baseline.
+- Runtime images install the `libusb` shared library instead of development
+  headers and build tooling.
+- Packaging version surfaces now identify the `0.4.0` release candidate.
+
+### Fixed
+
+- Release builds now compile the exact resolved `mochad-redux` commit recorded
+  in OCI metadata and release evidence.
+- Release builds now use the exact Alpine digest recorded in OCI metadata.
+- CI now runs packaging unit tests and uses current Docker actions with Node 24
+  runtimes.
+- Multi-platform CI now validates an exported OCI archive without depending on
+  a local registry or loopback-network behavior.
+- Release builds fail when required `mochad-redux` licensing and source-lineage
+  files are absent.
+- Tag publishing now rejects malformed or mismatched tags before authenticating
+  to GHCR.

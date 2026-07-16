@@ -1,7 +1,7 @@
 # mochad Docker Image
 
-![Status](https://img.shields.io/badge/status-integration%20testing-yellow)
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Status](https://img.shields.io/badge/status-release%20candidate-yellow)
+![Version](https://img.shields.io/badge/version-0.4.0-blue)
 ![License](https://img.shields.io/badge/packaging%20license-MIT-green)
 
 This image builds and runs `mochad`, the TCP daemon that talks to the X10 USB
@@ -17,7 +17,7 @@ or commit with `MOCHAD_REPOSITORY` and `MOCHAD_REF`. Release CI resolves and
 builds an exact `mochad-redux` commit and Alpine digest; it never publishes an
 image from a moving branch reference.
 
-Packaging version: `0.1.0`
+Packaging version: `0.4.0`
 
 ## Image Metadata
 
@@ -76,7 +76,7 @@ Build inputs:
 ```text
 MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git
 MOCHAD_REF=develop
-IMAGE_VERSION=0.1.0
+IMAGE_VERSION=0.4.0
 ALPINE_BASE_IMAGE=alpine:3.22
 ALPINE_DIGEST=unknown
 MOCHAD_REDUX_REVISION=unknown
@@ -211,23 +211,33 @@ does this automatically and records both immutable inputs in OCI labels.
 ## Docker Image
 
 The compose file builds the image locally for development and hardware testing.
-Release tags publish the image to:
+The release workflow is configured to publish the image for a tag that exactly
+matches the packaging version, currently `v0.4.0`, to:
 
 ```text
 ghcr.io/monsterray/mochad-docker
 ```
 
-To use a published image, replace the compose `build:` block with an `image:`
-reference such as:
+Once that tag has successfully completed the release workflow, a published image
+can be selected by replacing the compose `build:` block with this `image:`
+reference:
 
 ```yaml
-image: ghcr.io/monsterray/mochad-docker:0.1.0
+image: ghcr.io/monsterray/mochad-docker:0.4.0
 ```
 
-Tag release builds publish `linux/amd64` and `linux/arm64` images to GHCR with
-BuildKit SBOM and max-level provenance attestations. Pull requests build and
-validate the image without publishing. Release evidence requirements are listed
-in [RELEASE_EVIDENCE.md](RELEASE_EVIDENCE.md).
+The tag workflow is configured to publish `linux/amd64` and `linux/arm64`
+images to GHCR with BuildKit SBOM and max-level provenance attestations, then
+create or update the matching GitHub Release from `CHANGELOG.md`. A README
+reference is not evidence that an image has been published; confirm the version
+tag in GHCR before pulling it. Manual workflow runs and pull requests build and
+validate without publishing. Release evidence requirements are listed in
+[RELEASE_EVIDENCE.md](RELEASE_EVIDENCE.md).
+
+Tagged image builds embed the matching `mochad-redux` tag and verify that its
+reported version is identical. Publish the Redux release tag before pushing the
+same Docker packaging tag. Manual non-publishing builds continue to validate
+the configured development reference.
 
 ## Standalone Run
 

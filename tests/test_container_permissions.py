@@ -1,6 +1,7 @@
 from io import BytesIO
 from pathlib import Path
 import json
+import os
 import subprocess
 import tarfile
 import tempfile
@@ -69,9 +70,110 @@ class ContainerPermissionsTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "release-image.yml").read_text()
 
         self.assertIn("MOCHAD_REF=${{ steps.release-meta.outputs.redux_sha }}", workflow)
+        self.assertIn('redux_ref="v$version"', workflow)
+        self.assertIn('git clone --depth 1 --branch "$redux_ref"', workflow)
+        self.assertIn('[ "$redux_version" != "$version" ]', workflow)
         self.assertIn("MOCHAD_REDUX_REVISION=${{ steps.release-meta.outputs.redux_sha }}", workflow)
         self.assertIn("ALPINE_BASE_IMAGE=docker.io/library/alpine@${{ steps.release-meta.outputs.alpine_digest }}", workflow)
         self.assertIn("REQUIRE_AUDITED_SOURCE=true", workflow)
+
+    def test_packaging_version_surfaces_match_canonical_version(self) -> None:
+        version = (ROOT / "VERSION").read_text().strip()
+
+        self.assertEqual("0.4.0", version)
+        expected_content = {
+            "Dockerfile": f"ARG IMAGE_VERSION={version}",
+            "docker-compose.yml": f"IMAGE_VERSION: ${{IMAGE_VERSION:-{version}}}",
+            ".env.example": f"IMAGE_VERSION={version}",
+            "README.md": f"version-{version}-blue",
+            "CHANGELOG.md": f"## [{version}] - Unreleased",
+        }
+        for relative_path, expected in expected_content.items():
+            with self.subTest(path=relative_path):
+                self.assertIn(expected, (ROOT / relative_path).read_text())
+
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn(f"Packaging version: `{version}`", readme)
+        self.assertIn(f"ghcr.io/monsterray/mochad-docker:{version}", readme)
+
+    def test_release_validator_accepts_only_exact_version_tag(self) -> None:
+        validator = ROOT / "scripts" / "validate-release.sh"
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            notes_path = Path(temporary_directory) / "release-notes.md"
+            release_changelog = Path(temporary_directory) / "CHANGELOG.md"
+            release_changelog.write_text(
+                (ROOT / "CHANGELOG.md")
+                .read_text()
+                .replace("## [0.4.0] - Unreleased", "## [0.4.0] - 2026-07-16")
+            )
+            release_env = {**os.environ, "CHANGELOG_FILE": str(release_changelog)}
+            result = subprocess.run(
+                [str(validator), "v0.4.0", str(notes_path)],
+                env=release_env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual("0.4.0", result.stdout.strip())
+            notes = notes_path.read_text()
+            self.assertIn("### Added", notes)
+            self.assertIn("### Changed", notes)
+            self.assertIn("### Fixed", notes)
+            self.assertNotIn("## [Unreleased]", notes)
+
+            for invalid_tag in ("0.4.0", "v0.4", "v0.4.1", "v00.4.0", "v0.4.0-rc1"):
+                with self.subTest(tag=invalid_tag):
+                    rejected = subprocess.run(
+                        [str(validator), invalid_tag],
+                        capture_output=True,
+                        text=True,
+                    )
+                    self.assertNotEqual(0, rejected.returncode)
+
+            malformed_version = Path(temporary_directory) / "VERSION.invalid"
+            malformed_version.write_text("00.4.0\n")
+            invalid_version_env = {**os.environ, "VERSION_FILE": str(malformed_version)}
+            rejected_version = subprocess.run(
+                [str(validator), "v00.4.0"],
+                env=invalid_version_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(0, rejected_version.returncode)
+
+            missing_section = Path(temporary_directory) / "CHANGELOG.invalid.md"
+            missing_section.write_text("# Changelog\n\n## [Unreleased]\n")
+            missing_section_env = {**os.environ, "CHANGELOG_FILE": str(missing_section)}
+            rejected_changelog = subprocess.run(
+                [str(validator), "v0.4.0"],
+                env=missing_section_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(0, rejected_changelog.returncode)
+
+    def test_release_workflow_publishes_before_idempotent_release(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "release-image.yml").read_text()
+
+        self.assertIn("contents: write", workflow)
+        self.assertIn('[ "$GITHUB_EVENT_NAME" = "push" ]', workflow)
+        self.assertIn('scripts/validate-release.sh "$GITHUB_REF_NAME"', workflow)
+        self.assertIn('git merge-base --is-ancestor "$GITHUB_SHA" origin/master', workflow)
+        self.assertIn("if: steps.release-meta.outputs.publish == 'true'", workflow)
+        self.assertIn("push: ${{ steps.release-meta.outputs.publish == 'true' }}", workflow)
+        self.assertIn('gh release view "$RELEASE_TAG"', workflow)
+        self.assertIn('gh release edit "$RELEASE_TAG"', workflow)
+        self.assertIn('gh release create "$RELEASE_TAG"', workflow)
+        self.assertIn('--notes-file "$RELEASE_NOTES"', workflow)
+        self.assertIn("--verify-tag", workflow)
+        self.assertIn("--latest", workflow)
+        self.assertNotIn("--prerelease", workflow)
+        self.assertLess(
+            workflow.index("uses: docker/build-push-action@v7"),
+            workflow.index("name: Create or update GitHub Release"),
+        )
 
     def test_workflows_use_current_docker_action_majors(self) -> None:
         workflows = (ROOT / ".github" / "workflows").glob("*.yml")
@@ -84,6 +186,7 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertIn("docker/setup-qemu-action@v4", content)
         self.assertIn("docker/setup-buildx-action@v4", content)
         self.assertIn("docker/build-push-action@v7", content)
+        self.assertIn("docker/login-action@v4", content)
         self.assertNotIn("--format '{{ .Digest }}'", content)
         self.assertIn("--format '{{ .Manifest.Digest }}'", content)
         self.assertIn("--output type=oci,dest=/tmp/mochad-ci-index.tar", content)

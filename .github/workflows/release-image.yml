@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   id-token: write
 
@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -45,19 +47,33 @@ jobs:
           set -eu
           created="$(git show -s --format=%cI "$GITHUB_SHA")"
           packaging_sha="$GITHUB_SHA"
-          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
-            version="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+              echo "release tag ${GITHUB_REF_NAME} is not on the master branch" >&2
+              exit 1
+            fi
+            release_notes="$RUNNER_TEMP/release-notes.md"
+            version="$(scripts/validate-release.sh "$GITHUB_REF_NAME" "$release_notes")"
+            redux_ref="v$version"
+            publish=true
           else
-            version="0.0.0-pr"
+            version="$(cat VERSION)"
+            redux_ref="$MOCHAD_REF"
+            release_notes=""
+            publish=false
           fi
           alpine_digest="$(docker buildx imagetools inspect docker.io/library/alpine:3.22 --format '{{ .Manifest.Digest }}')"
           redux_dir="$(mktemp -d)"
-          git clone --depth 1 --branch "$MOCHAD_REF" "$MOCHAD_REPOSITORY" "$redux_dir"
+          git clone --depth 1 --branch "$redux_ref" "$MOCHAD_REPOSITORY" "$redux_dir"
           redux_sha="$(git -C "$redux_dir" rev-parse HEAD)"
           if [ -f "$redux_dir/VERSION" ]; then
             redux_version="$(cat "$redux_dir/VERSION")"
           else
             redux_version="$(git -C "$redux_dir" describe --tags --always)"
+          fi
+          if [ "$publish" = true ] && [ "$redux_version" != "$version" ]; then
+            echo "mochad-redux $redux_ref reports version $redux_version, expected $version" >&2
+            exit 1
           fi
           {
             echo "created=$created"
@@ -66,10 +82,13 @@ jobs:
             echo "alpine_digest=$alpine_digest"
             echo "redux_sha=$redux_sha"
             echo "redux_version=$redux_version"
+            echo "redux_ref=$redux_ref"
+            echo "publish=$publish"
+            echo "release_notes=$release_notes"
           } >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.release-meta.outputs.publish == 'true'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -77,12 +96,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           pull: true
-          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          push: ${{ steps.release-meta.outputs.publish == 'true' }}
           tags: |
             ${{ env.IMAGE_NAME }}:${{ steps.release-meta.outputs.version }}
           labels: |
@@ -113,17 +133,41 @@ jobs:
           provenance: mode=max
 
       - name: Release evidence reminder
+        if: steps.release-meta.outputs.publish == 'true'
         run: |
           cat <<EOF
-          Record these values in release evidence before publishing release notes:
+          Record these values in release evidence:
           packaging_sha=${{ steps.release-meta.outputs.packaging_sha }}
           redux_sha=${{ steps.release-meta.outputs.redux_sha }}
           redux_version=${{ steps.release-meta.outputs.redux_version }}
           alpine_digest=${{ steps.release-meta.outputs.alpine_digest }}
           image=${{ env.IMAGE_NAME }}:${{ steps.release-meta.outputs.version }}
+          manifest_digest=${{ steps.build.outputs.digest }}
           platform_digests=record from GHCR package page or docker buildx imagetools inspect
-          manifest_digest=record from docker buildx imagetools inspect
           sbom=attached by BuildKit on tag builds
           provenance=attached by BuildKit on tag builds
           license_paths=/usr/share/licenses/mochad-docker and /usr/share/licenses/mochad-redux
           EOF
+
+      - name: Create or update GitHub Release
+        if: steps.release-meta.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ steps.release-meta.outputs.release_notes }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ steps.release-meta.outputs.version }}
+        run: |
+          set -eu
+          title="mochad-docker ${RELEASE_VERSION}"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --title "$title" \
+              --notes-file "$RELEASE_NOTES" \
+              --latest
+          else
+            gh release create "$RELEASE_TAG" \
+              --verify-tag \
+              --title "$title" \
+              --notes-file "$RELEASE_NOTES" \
+              --latest
+          fi

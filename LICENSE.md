@@ -5,7 +5,7 @@ This repository contains Docker packaging for the upstream `mochad` daemon.
 The Docker packaging files in this repository are provided under the MIT
 License:
 
-Copyright (c) 2026 MQTT Mochad Bridge contributors
+Copyright (c) 2026 mochad-docker contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
