@@ -15,6 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v4
+      - name: Validate standalone Compose contract
+        run: docker compose --env-file release/versions.env config --quiet
       - name: Resolve immutable build inputs
         id: metadata
         run: |
