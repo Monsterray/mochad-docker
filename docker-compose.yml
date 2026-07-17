@@ -7,7 +7,7 @@ services:
       args:
         MOCHAD_REPOSITORY: ${MOCHAD_REPOSITORY:-https://github.com/Monsterray/mochad-redux.git}
         MOCHAD_REF: ${MOCHAD_REF:-develop}
-        MOCHAD_SOURCE_SHA: ${MOCHAD_SOURCE_SHA:-unknown}
+        MOCHAD_SOURCE_SHA: ${MOCHAD_SOURCE_SHA:-}
         BUILD_DATE: ${BUILD_DATE:-1970-01-01T00:00:00Z}
         VCS_REF: ${VCS_REF:-unknown}
         IMAGE_VERSION: ${IMAGE_VERSION:?set IMAGE_VERSION or use --env-file release/versions.env}
