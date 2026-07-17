@@ -83,10 +83,10 @@ class ContainerPermissionsTests(unittest.TestCase):
 
         self.assertEqual("0.4.0", version)
         expected_content = {
-            "Dockerfile": f"ARG IMAGE_VERSION={version}",
-            "docker-compose.yml": f"IMAGE_VERSION: ${{IMAGE_VERSION:-{version}}}",
+            "Dockerfile": "ARG IMAGE_VERSION",
+            "docker-compose.yml": "IMAGE_VERSION: ${IMAGE_VERSION:?set IMAGE_VERSION or use --env-file release/versions.env}",
             ".env.example": f"IMAGE_VERSION={version}",
-            "README.md": f"version-{version}-blue",
+            "README.md": "[VERSION](VERSION)",
         }
         for relative_path, expected in expected_content.items():
             with self.subTest(path=relative_path):
@@ -99,9 +99,27 @@ class ContainerPermissionsTests(unittest.TestCase):
             r"(?:Unreleased|[0-9]{4}-[0-9]{2}-[0-9]{2})$",
         )
 
+        versions_env = (ROOT / "release" / "versions.env").read_text()
+        self.assertIn(f"IMAGE_VERSION={version}", versions_env)
+        self.assertRegex(versions_env, r"(?m)^MOCHAD_SOURCE_SHA=[0-9a-f]{40}$")
+        self.assertRegex(versions_env, r"(?m)^ALPINE_IMAGE=.*@sha256:[0-9a-f]{64}$")
+
         readme = (ROOT / "README.md").read_text()
-        self.assertIn(f"Packaging version: `{version}`", readme)
-        self.assertIn(f"ghcr.io/monsterray/mochad-docker:{version}", readme)
+        self.assertIn("ghcr.io/monsterray/mochad-docker:0.4.0", readme)
+
+    def test_version_contract_scripts_and_runtime_metadata_are_present(self) -> None:
+        dockerfile = (ROOT / "Dockerfile").read_text()
+
+        self.assertIn("/usr/share/mochad-docker/build-info.json", dockerfile)
+        for relative_path in (
+            "scripts/validate/version-consistency.sh",
+            "scripts/release/prepare-release.sh",
+            "scripts/release/prepare-next-dev.sh",
+            "scripts/release/sync-version-files.sh",
+            "docs/compatibility.md",
+        ):
+            with self.subTest(path=relative_path):
+                self.assertTrue((ROOT / relative_path).is_file())
 
     def test_release_validator_accepts_only_exact_version_tag(self) -> None:
         validator = ROOT / "scripts" / "validate-release.sh"

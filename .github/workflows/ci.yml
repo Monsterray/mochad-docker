@@ -33,7 +33,10 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Validate Docker Compose
-        run: docker compose config
+        run: IMAGE_VERSION="$(cat VERSION)" docker compose config
+
+      - name: Validate version contract
+        run: scripts/validate/version-consistency.sh
 
       - name: Prepare build metadata
         id: meta
@@ -67,6 +70,7 @@ jobs:
             --build-arg MOCHAD_REF=master \
             --build-arg BUILD_DATE="${{ steps.meta.outputs.created }}" \
             --build-arg VCS_REF="${GITHUB_SHA}" \
+            --build-arg IMAGE_VERSION="$(cat VERSION)" \
             --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg ALPINE_DIGEST="${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg MOCHAD_REDUX_REVISION=unknown \
@@ -80,8 +84,10 @@ jobs:
             --pull \
             --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
             --build-arg MOCHAD_REF="${{ steps.meta.outputs.redux_revision }}" \
+            --build-arg MOCHAD_SOURCE_SHA="${{ steps.meta.outputs.redux_revision }}" \
             --build-arg BUILD_DATE="${{ steps.meta.outputs.created }}" \
             --build-arg VCS_REF="${GITHUB_SHA}" \
+            --build-arg IMAGE_VERSION="$(cat VERSION)" \
             --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg ALPINE_DIGEST="${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg MOCHAD_REDUX_REVISION="${{ steps.meta.outputs.redux_revision }}" \
@@ -110,10 +116,12 @@ jobs:
               --load \
               --build-arg BUILD_DATE="$CREATED" \
               --build-arg VCS_REF="$GITHUB_SHA" \
+              --build-arg IMAGE_VERSION="$(cat VERSION)" \
               --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
               --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
               --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
               --build-arg MOCHAD_REF="$REDUX_REVISION" \
+              --build-arg MOCHAD_SOURCE_SHA="$REDUX_REVISION" \
               --build-arg MOCHAD_REDUX_REVISION="$REDUX_REVISION" \
               --build-arg MOCHAD_REDUX_VERSION="$REDUX_VERSION" \
               --build-arg REQUIRE_AUDITED_SOURCE=true \
@@ -136,10 +144,12 @@ jobs:
             --output type=oci,dest=/tmp/mochad-ci-index.tar \
             --build-arg BUILD_DATE="$CREATED" \
             --build-arg VCS_REF="$GITHUB_SHA" \
+            --build-arg IMAGE_VERSION="$(cat VERSION)" \
             --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
             --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
             --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
             --build-arg MOCHAD_REF="$REDUX_REVISION" \
+            --build-arg MOCHAD_SOURCE_SHA="$REDUX_REVISION" \
             --build-arg MOCHAD_REDUX_REVISION="$REDUX_REVISION" \
             --build-arg MOCHAD_REDUX_VERSION="$REDUX_VERSION" \
             --build-arg REQUIRE_AUDITED_SOURCE=true \

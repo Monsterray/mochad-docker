@@ -18,6 +18,7 @@ WORKDIR /src
 
 ARG MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git
 ARG MOCHAD_REF
+ARG MOCHAD_SOURCE_SHA
 # Deprecated compatibility alias. Prefer MOCHAD_REF.
 ARG MOCHAD_COMMIT
 ARG MOCHAD_REDUX_REVISION
@@ -25,7 +26,7 @@ ARG REQUIRE_AUDITED_SOURCE=false
 
 RUN set -eux; \
     git clone "${MOCHAD_REPOSITORY}" .; \
-    checkout_ref="${MOCHAD_REF:-develop}"; \
+    checkout_ref="${MOCHAD_SOURCE_SHA:-${MOCHAD_REF:-develop}}"; \
     git checkout "${checkout_ref}"; \
     actual_revision="$(git rev-parse HEAD)"; \
     if [ -n "${MOCHAD_REDUX_REVISION:-}" ] && [ "${MOCHAD_REDUX_REVISION}" != "unknown" ] && [ "${MOCHAD_REDUX_REVISION}" != "${actual_revision}" ]; then \
@@ -63,11 +64,12 @@ FROM ${ALPINE_BASE_IMAGE}
 
 ARG BUILD_DATE=1970-01-01T00:00:00Z
 ARG VCS_REF=unknown
-ARG IMAGE_VERSION=0.4.0
+ARG IMAGE_VERSION
 ARG ALPINE_IMAGE=docker.io/library/alpine:3.22
 ARG ALPINE_DIGEST=unknown
 ARG MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git
 ARG MOCHAD_REF=develop
+ARG MOCHAD_SOURCE_SHA=unknown
 ARG MOCHAD_REDUX_REVISION=unknown
 ARG MOCHAD_REDUX_VERSION=unknown
 
@@ -97,6 +99,9 @@ RUN apk add --no-cache \
 COPY --from=builder \
     /tmp/install/usr/local/bin/mochad \
     /usr/local/bin/mochad
+COPY --from=builder \
+    /tmp/mochad-source-revision \
+    /usr/share/mochad-docker/mochad-source-revision
 
 # Docker doesn't like systemd files or udev rules
 COPY --from=builder \
@@ -108,6 +113,19 @@ COPY LICENSE.md /usr/share/licenses/mochad-docker/LICENSE.md
 COPY --from=builder \
     /tmp/runtime-licenses/mochad-redux/ \
     /usr/share/licenses/mochad-redux/
+
+RUN set -eu; \
+    source_sha="$(cat /usr/share/mochad-docker/mochad-source-revision)"; \
+    printf '{\n' > /usr/share/mochad-docker/build-info.json; \
+    printf '  "name": "mochad-docker",\n' >> /usr/share/mochad-docker/build-info.json; \
+    printf '  "version": "%s",\n' "$IMAGE_VERSION" >> /usr/share/mochad-docker/build-info.json; \
+    printf '  "mochad_repository": "%s",\n' "$MOCHAD_REPOSITORY" >> /usr/share/mochad-docker/build-info.json; \
+    printf '  "mochad_source_sha": "%s",\n' "$source_sha" >> /usr/share/mochad-docker/build-info.json; \
+    printf '  "mochad_redux_version": "%s",\n' "$MOCHAD_REDUX_VERSION" >> /usr/share/mochad-docker/build-info.json; \
+    printf '  "alpine_image": "%s",\n' "$ALPINE_IMAGE" >> /usr/share/mochad-docker/build-info.json; \
+    printf '  "alpine_digest": "%s"\n' "$ALPINE_DIGEST" >> /usr/share/mochad-docker/build-info.json; \
+    printf '}\n' >> /usr/share/mochad-docker/build-info.json; \
+    rm /usr/share/mochad-docker/mochad-source-revision
 #
 # COPY --from=builder \
 #     /src/systemd/mochad.service \

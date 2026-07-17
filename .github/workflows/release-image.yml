@@ -124,6 +124,7 @@ jobs:
             IMAGE_VERSION=${{ steps.release-meta.outputs.version }}
             MOCHAD_REPOSITORY=${{ env.MOCHAD_REPOSITORY }}
             MOCHAD_REF=${{ steps.release-meta.outputs.redux_sha }}
+            MOCHAD_SOURCE_SHA=${{ steps.release-meta.outputs.redux_sha }}
             MOCHAD_REDUX_REVISION=${{ steps.release-meta.outputs.redux_sha }}
             MOCHAD_REDUX_VERSION=${{ steps.release-meta.outputs.redux_version }}
             ALPINE_BASE_IMAGE=docker.io/library/alpine@${{ steps.release-meta.outputs.alpine_digest }}

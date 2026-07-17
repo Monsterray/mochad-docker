@@ -7,12 +7,13 @@ services:
       args:
         MOCHAD_REPOSITORY: ${MOCHAD_REPOSITORY:-https://github.com/Monsterray/mochad-redux.git}
         MOCHAD_REF: ${MOCHAD_REF:-develop}
+        MOCHAD_SOURCE_SHA: ${MOCHAD_SOURCE_SHA:-unknown}
         BUILD_DATE: ${BUILD_DATE:-1970-01-01T00:00:00Z}
         VCS_REF: ${VCS_REF:-unknown}
-        IMAGE_VERSION: ${IMAGE_VERSION:-0.4.0}
+        IMAGE_VERSION: ${IMAGE_VERSION:?set IMAGE_VERSION or use --env-file release/versions.env}
         ALPINE_BASE_IMAGE: ${ALPINE_BASE_IMAGE:-alpine:3.22}
         ALPINE_DIGEST: ${ALPINE_DIGEST:-unknown}
-        MOCHAD_REDUX_REVISION: ${MOCHAD_REDUX_REVISION:-unknown}
+        MOCHAD_REDUX_REVISION: ${MOCHAD_REDUX_REVISION:-${MOCHAD_SOURCE_SHA:-unknown}}
         MOCHAD_REDUX_VERSION: ${MOCHAD_REDUX_VERSION:-unknown}
         REQUIRE_AUDITED_SOURCE: ${REQUIRE_AUDITED_SOURCE:-false}
     image: x10-mochad:local

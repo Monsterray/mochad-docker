@@ -17,7 +17,9 @@ or commit with `MOCHAD_REPOSITORY` and `MOCHAD_REF`. Release CI resolves and
 builds an exact `mochad-redux` commit and Alpine digest; it never publishes an
 image from a moving branch reference.
 
-Packaging version: `0.4.0`
+The packaging version is maintained in [VERSION](VERSION). Release build inputs
+for the embedded daemon and Alpine base are recorded separately in
+[release/versions.env](release/versions.env).
 
 ## Image Metadata
 
@@ -76,6 +78,7 @@ Build inputs:
 ```text
 MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git
 MOCHAD_REF=develop
+MOCHAD_SOURCE_SHA=unknown
 IMAGE_VERSION=0.4.0
 ALPINE_BASE_IMAGE=alpine:3.22
 ALPINE_DIGEST=unknown
@@ -180,6 +183,12 @@ allow IPv4-mapped IPv6 sockets even though `mochad-redux` requested them.
 docker compose build
 ```
 
+For a repeatable release-candidate build, use the reviewed immutable inputs:
+
+```sh
+docker compose --env-file release/versions.env build
+```
+
 To test a specific branch of `mochad-redux`, build with:
 
 ```sh
@@ -207,6 +216,24 @@ reuse an older clone layer.
 For a repeatable local build, set `MOCHAD_REF` to a full commit SHA and set
 `ALPINE_BASE_IMAGE` to `docker.io/library/alpine@sha256:<digest>`. Release CI
 does this automatically and records both immutable inputs in OCI labels.
+The image also writes the resolved inputs to
+`/usr/share/mochad-docker/build-info.json`.
+
+## Versioning
+
+`VERSION` is the single source for the Docker packaging version. Files use
+plain semantic versions such as `0.5.0`, `0.5.0-dev`, and `0.5.0-rc1`; Git tags
+use the corresponding leading `v`. The release scripts prepare only local,
+reviewable files:
+
+```sh
+scripts/release/prepare-release.sh 0.5.0
+scripts/release/prepare-next-dev.sh 0.6.0
+```
+
+They require a clean tree and never commit, tag, push, publish, or create a
+GitHub release. See [compatibility](docs/compatibility.md) for the packaging to
+daemon mapping.
 
 ## Docker Image
 
