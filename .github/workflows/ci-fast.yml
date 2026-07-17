@@ -1,0 +1,23 @@
+name: CI Fast
+
+on:
+  push:
+    branches: [master, develop, "fix/**", "test-simplification/**"]
+  pull_request:
+    branches: [master, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Validate release inputs and packaging rules
+        run: |
+          scripts/validate/version-consistency.sh
+          python -m unittest discover -s tests -v

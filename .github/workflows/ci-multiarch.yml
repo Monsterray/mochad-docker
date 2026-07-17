@@ -1,0 +1,30 @@
+name: CI Multiarch
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - name: Build non-publishing OCI index
+        run: |
+          . release/versions.env
+          docker buildx build --platform linux/amd64,linux/arm64 --output type=oci,dest=/tmp/mochad-ci-index.tar \
+            --build-arg IMAGE_VERSION="$IMAGE_VERSION" \
+            --build-arg MOCHAD_REPOSITORY="$MOCHAD_REPOSITORY" \
+            --build-arg MOCHAD_REF="$MOCHAD_SOURCE_SHA" \
+            --build-arg MOCHAD_SOURCE_SHA="$MOCHAD_SOURCE_SHA" \
+            --build-arg MOCHAD_REDUX_REVISION="$MOCHAD_SOURCE_SHA" \
+            --build-arg MOCHAD_REDUX_VERSION="$MOCHAD_REDUX_VERSION" \
+            --build-arg ALPINE_BASE_IMAGE="$ALPINE_IMAGE" \
+            --build-arg ALPINE_IMAGE="$ALPINE_IMAGE" \
+            --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
+            --build-arg REQUIRE_AUDITED_SOURCE=true .
+          scripts/validate-oci-index.sh --archive /tmp/mochad-ci-index.tar

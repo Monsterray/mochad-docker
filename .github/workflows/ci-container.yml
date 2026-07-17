@@ -1,0 +1,55 @@
+name: CI Container
+
+on:
+  push:
+    branches: [master, develop, "fix/**", "test-simplification/**"]
+  pull_request:
+    branches: [master, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+      - name: Resolve immutable build inputs
+        id: metadata
+        run: |
+          set -eu
+          . release/versions.env
+          echo "created=$(git show -s --format=%cI HEAD)" >> "$GITHUB_OUTPUT"
+          echo "revision=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "version=${IMAGE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "repository=${MOCHAD_REPOSITORY}" >> "$GITHUB_OUTPUT"
+          echo "source_sha=${MOCHAD_SOURCE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "redux_version=${MOCHAD_REDUX_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "alpine_image=${ALPINE_IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "alpine_digest=${ALPINE_DIGEST}" >> "$GITHUB_OUTPUT"
+      - name: Build one native image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          push: false
+          tags: x10-mochad:ci
+          build-args: |
+            BUILD_DATE=${{ steps.metadata.outputs.created }}
+            VCS_REF=${{ steps.metadata.outputs.revision }}
+            IMAGE_VERSION=${{ steps.metadata.outputs.version }}
+            MOCHAD_REPOSITORY=${{ steps.metadata.outputs.repository }}
+            MOCHAD_REF=${{ steps.metadata.outputs.source_sha }}
+            MOCHAD_SOURCE_SHA=${{ steps.metadata.outputs.source_sha }}
+            MOCHAD_REDUX_REVISION=${{ steps.metadata.outputs.source_sha }}
+            MOCHAD_REDUX_VERSION=${{ steps.metadata.outputs.redux_version }}
+            ALPINE_BASE_IMAGE=${{ steps.metadata.outputs.alpine_image }}
+            ALPINE_IMAGE=${{ steps.metadata.outputs.alpine_image }}
+            ALPINE_DIGEST=${{ steps.metadata.outputs.alpine_digest }}
+            REQUIRE_AUDITED_SOURCE=true
+      - name: Inspect the built image once
+        run: |
+          scripts/validate-image-labels.sh x10-mochad:ci
+          docker run --rm --entrypoint /usr/local/bin/mochad x10-mochad:ci --version
+          docker run --rm --entrypoint /usr/local/bin/mochad x10-mochad:ci --help
