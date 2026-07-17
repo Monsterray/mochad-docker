@@ -3,9 +3,7 @@
 All notable changes to this Docker packaging project will be documented in this
 file.
 
-## [Unreleased]
-
-## [0.4.0] - Unreleased
+## [0.4.0] - 07/16/2026
 
 ### Added
 
