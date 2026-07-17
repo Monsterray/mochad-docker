@@ -176,6 +176,8 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertIn('gh release view "$RELEASE_TAG"', workflow)
         self.assertIn('gh release edit "$RELEASE_TAG"', workflow)
         self.assertIn('gh release create "$RELEASE_TAG"', workflow)
+        self.assertIn("GH_REPO: ${{ github.repository }}", workflow)
+        self.assertIn("/tmp/release-create.err", workflow)
         self.assertIn('--notes-file "$RELEASE_NOTES"', workflow)
         self.assertIn("--verify-tag", workflow)
         self.assertIn("--latest", workflow)

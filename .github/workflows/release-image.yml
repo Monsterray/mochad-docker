@@ -153,6 +153,7 @@ jobs:
         if: steps.release-meta.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_NOTES: ${{ steps.release-meta.outputs.release_notes }}
           RELEASE_TAG: ${{ github.ref_name }}
           RELEASE_VERSION: ${{ steps.release-meta.outputs.version }}
@@ -165,9 +166,21 @@ jobs:
               --notes-file "$RELEASE_NOTES" \
               --latest
           else
-            gh release create "$RELEASE_TAG" \
-              --verify-tag \
-              --title "$title" \
-              --notes-file "$RELEASE_NOTES" \
-              --latest
+            if ! gh release create "$RELEASE_TAG" \
+                --verify-tag \
+                --title "$title" \
+                --notes-file "$RELEASE_NOTES" \
+                --latest 2>/tmp/release-create.err; then
+              # A concurrent release job may have created this tag after the
+              # initial lookup. Confirm that case instead of failing on 422.
+              if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+                gh release edit "$RELEASE_TAG" \
+                  --title "$title" \
+                  --notes-file "$RELEASE_NOTES" \
+                  --latest
+              else
+                cat /tmp/release-create.err >&2
+                exit 1
+              fi
+            fi
           fi
