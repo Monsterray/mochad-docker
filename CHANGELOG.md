@@ -3,7 +3,9 @@
 All notable changes to this Docker packaging project will be documented in this
 file.
 
-## [0.4.0] - 07/16/2026
+## [Unreleased]
+
+## [0.4.0] - 2026-07-16
 
 ### Added
 
@@ -24,7 +26,7 @@ file.
 
 - Runtime images install the `libusb` shared library instead of development
   headers and build tooling.
-- Packaging version surfaces now identify the `0.4.0` release candidate.
+- Packaging version surfaces now identify the `0.4.0` release.
 
 ### Fixed
 

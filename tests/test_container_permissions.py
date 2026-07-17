@@ -2,6 +2,7 @@ from io import BytesIO
 from pathlib import Path
 import json
 import os
+import re
 import subprocess
 import tarfile
 import tempfile
@@ -86,11 +87,17 @@ class ContainerPermissionsTests(unittest.TestCase):
             "docker-compose.yml": f"IMAGE_VERSION: ${{IMAGE_VERSION:-{version}}}",
             ".env.example": f"IMAGE_VERSION={version}",
             "README.md": f"version-{version}-blue",
-            "CHANGELOG.md": f"## [{version}] - Unreleased",
         }
         for relative_path, expected in expected_content.items():
             with self.subTest(path=relative_path):
                 self.assertIn(expected, (ROOT / relative_path).read_text())
+
+        changelog = (ROOT / "CHANGELOG.md").read_text()
+        self.assertRegex(
+            changelog,
+            rf"(?m)^## \[{re.escape(version)}\] - "
+            r"(?:Unreleased|[0-9]{4}-[0-9]{2}-[0-9]{2})$",
+        )
 
         readme = (ROOT / "README.md").read_text()
         self.assertIn(f"Packaging version: `{version}`", readme)
@@ -103,9 +110,12 @@ class ContainerPermissionsTests(unittest.TestCase):
             notes_path = Path(temporary_directory) / "release-notes.md"
             release_changelog = Path(temporary_directory) / "CHANGELOG.md"
             release_changelog.write_text(
-                (ROOT / "CHANGELOG.md")
-                .read_text()
-                .replace("## [0.4.0] - Unreleased", "## [0.4.0] - 2026-07-16")
+                re.sub(
+                    r"(?m)^## \[0\.4\.0\] - .+$",
+                    "## [0.4.0] - 2026-07-16",
+                    (ROOT / "CHANGELOG.md").read_text(),
+                    count=1,
+                )
             )
             release_env = {**os.environ, "CHANGELOG_FILE": str(release_changelog)}
             result = subprocess.run(
