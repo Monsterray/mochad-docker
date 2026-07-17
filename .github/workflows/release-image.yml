@@ -128,6 +128,7 @@ jobs:
             MOCHAD_REDUX_REVISION=${{ steps.release-meta.outputs.redux_sha }}
             MOCHAD_REDUX_VERSION=${{ steps.release-meta.outputs.redux_version }}
             ALPINE_BASE_IMAGE=docker.io/library/alpine@${{ steps.release-meta.outputs.alpine_digest }}
+            ALPINE_IMAGE=docker.io/library/alpine@${{ steps.release-meta.outputs.alpine_digest }}
             ALPINE_DIGEST=${{ steps.release-meta.outputs.alpine_digest }}
             REQUIRE_AUDITED_SOURCE=true
           sbom: true

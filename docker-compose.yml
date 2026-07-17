@@ -12,6 +12,7 @@ services:
         VCS_REF: ${VCS_REF:-unknown}
         IMAGE_VERSION: ${IMAGE_VERSION:?set IMAGE_VERSION or use --env-file release/versions.env}
         ALPINE_BASE_IMAGE: ${ALPINE_BASE_IMAGE:-alpine:3.22}
+        ALPINE_IMAGE: ${ALPINE_IMAGE:-docker.io/library/alpine:3.22}
         ALPINE_DIGEST: ${ALPINE_DIGEST:-unknown}
         MOCHAD_REDUX_REVISION: ${MOCHAD_REDUX_REVISION:-${MOCHAD_SOURCE_SHA:-unknown}}
         MOCHAD_REDUX_VERSION: ${MOCHAD_REDUX_VERSION:-unknown}

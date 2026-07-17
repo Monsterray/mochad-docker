@@ -72,6 +72,7 @@ jobs:
             --build-arg VCS_REF="${GITHUB_SHA}" \
             --build-arg IMAGE_VERSION="$(cat VERSION)" \
             --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@${{ steps.meta.outputs.alpine_digest }}" \
+            --build-arg ALPINE_IMAGE="docker.io/library/alpine@${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg ALPINE_DIGEST="${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg MOCHAD_REDUX_REVISION=unknown \
             --build-arg MOCHAD_REDUX_VERSION=unknown \
@@ -89,6 +90,7 @@ jobs:
             --build-arg VCS_REF="${GITHUB_SHA}" \
             --build-arg IMAGE_VERSION="$(cat VERSION)" \
             --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@${{ steps.meta.outputs.alpine_digest }}" \
+            --build-arg ALPINE_IMAGE="docker.io/library/alpine@${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg ALPINE_DIGEST="${{ steps.meta.outputs.alpine_digest }}" \
             --build-arg MOCHAD_REDUX_REVISION="${{ steps.meta.outputs.redux_revision }}" \
             --build-arg MOCHAD_REDUX_VERSION="${{ steps.meta.outputs.redux_version }}" \
@@ -118,6 +120,7 @@ jobs:
               --build-arg VCS_REF="$GITHUB_SHA" \
               --build-arg IMAGE_VERSION="$(cat VERSION)" \
               --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
+              --build-arg ALPINE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
               --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
               --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
               --build-arg MOCHAD_REF="$REDUX_REVISION" \
@@ -146,6 +149,7 @@ jobs:
             --build-arg VCS_REF="$GITHUB_SHA" \
             --build-arg IMAGE_VERSION="$(cat VERSION)" \
             --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
+            --build-arg ALPINE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
             --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
             --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
             --build-arg MOCHAD_REF="$REDUX_REVISION" \
