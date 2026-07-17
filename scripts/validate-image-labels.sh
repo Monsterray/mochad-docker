@@ -48,7 +48,7 @@ case "$redux_revision" in
 esac
 
 case "$base_name" in
-    *alpine:3.22)
+    *alpine:3.22|*alpine@sha256:*)
         ;;
     *)
         echo "FAIL: org.opencontainers.image.base.name must identify Alpine 3.22" >&2
