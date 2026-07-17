@@ -25,7 +25,7 @@ ARG REQUIRE_AUDITED_SOURCE=false
 
 RUN set -eux; \
     git clone "${MOCHAD_REPOSITORY}" .; \
-    checkout_ref="${MOCHAD_REF:-${MOCHAD_COMMIT:-develop}}"; \
+    checkout_ref="${MOCHAD_REF:-develop}"; \
     git checkout "${checkout_ref}"; \
     actual_revision="$(git rev-parse HEAD)"; \
     if [ -n "${MOCHAD_REDUX_REVISION:-}" ] && [ "${MOCHAD_REDUX_REVISION}" != "unknown" ] && [ "${MOCHAD_REDUX_REVISION}" != "${actual_revision}" ]; then \
