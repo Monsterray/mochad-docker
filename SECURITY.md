@@ -2,8 +2,9 @@
 
 ## Supported Versions
 
-This Docker packaging project is pre-release. Security fixes are applied to the
-current `main` branch until versioned releases begin.
+Security fixes are applied to the current `master` release branch and are
+integrated through `develop`. Published image tags receive fixes when supported
+by the current release line.
 
 ## Reporting a Vulnerability
 

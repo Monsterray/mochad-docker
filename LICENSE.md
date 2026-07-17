@@ -5,7 +5,7 @@ This repository contains Docker packaging for the upstream `mochad` daemon.
 The Docker packaging files in this repository are provided under the MIT
 License:
 
-Copyright (c) 2026 MQTT Mochad Bridge contributors
+Copyright (c) 2026 mochad-docker contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-The built image contains the upstream `mochad` program, which is licensed by
-its authors under GPL-2.0. Redistribution of built images must comply with the
-upstream `mochad` license.
+The built image contains `mochad-redux`. Release images should use an audited
+`mochad-redux` source checkout that includes `COPYING`, `NOTICE`, and
+`docs/source-lineage.md`. Redistribution of built images must comply with the
+daemon license documented by that source checkout. The current release image
+SPDX expression is `MIT AND GPL-3.0-or-later`.

@@ -1,0 +1,173 @@
+name: Release Image
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+env:
+  IMAGE_NAME: ghcr.io/monsterray/mochad-docker
+  MOCHAD_REPOSITORY: https://github.com/Monsterray/mochad-redux.git
+  MOCHAD_REF: develop
+
+jobs:
+  image:
+    name: Build release image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Run packaging unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Prepare release metadata
+        id: release-meta
+        run: |
+          set -eu
+          created="$(git show -s --format=%cI "$GITHUB_SHA")"
+          packaging_sha="$GITHUB_SHA"
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+              echo "release tag ${GITHUB_REF_NAME} is not on the master branch" >&2
+              exit 1
+            fi
+            release_notes="$RUNNER_TEMP/release-notes.md"
+            version="$(scripts/validate-release.sh "$GITHUB_REF_NAME" "$release_notes")"
+            redux_ref="v$version"
+            publish=true
+          else
+            version="$(cat VERSION)"
+            redux_ref="$MOCHAD_REF"
+            release_notes=""
+            publish=false
+          fi
+          alpine_digest="$(docker buildx imagetools inspect docker.io/library/alpine:3.22 --format '{{ .Manifest.Digest }}')"
+          redux_dir="$(mktemp -d)"
+          git clone --depth 1 --branch "$redux_ref" "$MOCHAD_REPOSITORY" "$redux_dir"
+          redux_sha="$(git -C "$redux_dir" rev-parse HEAD)"
+          if [ -f "$redux_dir/VERSION" ]; then
+            redux_version="$(cat "$redux_dir/VERSION")"
+          else
+            redux_version="$(git -C "$redux_dir" describe --tags --always)"
+          fi
+          if [ "$publish" = true ] && [ "$redux_version" != "$version" ]; then
+            echo "mochad-redux $redux_ref reports version $redux_version, expected $version" >&2
+            exit 1
+          fi
+          {
+            echo "created=$created"
+            echo "version=$version"
+            echo "packaging_sha=$packaging_sha"
+            echo "alpine_digest=$alpine_digest"
+            echo "redux_sha=$redux_sha"
+            echo "redux_version=$redux_version"
+            echo "redux_ref=$redux_ref"
+            echo "publish=$publish"
+            echo "release_notes=$release_notes"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        if: steps.release-meta.outputs.publish == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          pull: true
+          push: ${{ steps.release-meta.outputs.publish == 'true' }}
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ steps.release-meta.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=mochad-docker
+            org.opencontainers.image.description=X10 CM15A CM19A USB automation daemon
+            org.opencontainers.image.source=https://github.com/Monsterray/mochad-docker
+            org.opencontainers.image.version=${{ steps.release-meta.outputs.version }}
+            org.opencontainers.image.revision=${{ steps.release-meta.outputs.packaging_sha }}
+            org.opencontainers.image.created=${{ steps.release-meta.outputs.created }}
+            org.opencontainers.image.licenses=MIT AND GPL-3.0-or-later
+            org.opencontainers.image.base.name=docker.io/library/alpine:3.22
+            org.opencontainers.image.base.digest=${{ steps.release-meta.outputs.alpine_digest }}
+            io.github.monsterray.mochad-redux.repository=${{ env.MOCHAD_REPOSITORY }}
+            io.github.monsterray.mochad-redux.revision=${{ steps.release-meta.outputs.redux_sha }}
+            io.github.monsterray.mochad-redux.version=${{ steps.release-meta.outputs.redux_version }}
+          build-args: |
+            BUILD_DATE=${{ steps.release-meta.outputs.created }}
+            VCS_REF=${{ steps.release-meta.outputs.packaging_sha }}
+            IMAGE_VERSION=${{ steps.release-meta.outputs.version }}
+            MOCHAD_REPOSITORY=${{ env.MOCHAD_REPOSITORY }}
+            MOCHAD_REF=${{ steps.release-meta.outputs.redux_sha }}
+            MOCHAD_REDUX_REVISION=${{ steps.release-meta.outputs.redux_sha }}
+            MOCHAD_REDUX_VERSION=${{ steps.release-meta.outputs.redux_version }}
+            ALPINE_BASE_IMAGE=docker.io/library/alpine@${{ steps.release-meta.outputs.alpine_digest }}
+            ALPINE_DIGEST=${{ steps.release-meta.outputs.alpine_digest }}
+            REQUIRE_AUDITED_SOURCE=true
+          sbom: true
+          provenance: mode=max
+
+      - name: Release evidence reminder
+        if: steps.release-meta.outputs.publish == 'true'
+        run: |
+          cat <<EOF
+          Record these values in release evidence:
+          packaging_sha=${{ steps.release-meta.outputs.packaging_sha }}
+          redux_sha=${{ steps.release-meta.outputs.redux_sha }}
+          redux_version=${{ steps.release-meta.outputs.redux_version }}
+          alpine_digest=${{ steps.release-meta.outputs.alpine_digest }}
+          image=${{ env.IMAGE_NAME }}:${{ steps.release-meta.outputs.version }}
+          manifest_digest=${{ steps.build.outputs.digest }}
+          platform_digests=record from GHCR package page or docker buildx imagetools inspect
+          sbom=attached by BuildKit on tag builds
+          provenance=attached by BuildKit on tag builds
+          license_paths=/usr/share/licenses/mochad-docker and /usr/share/licenses/mochad-redux
+          EOF
+
+      - name: Create or update GitHub Release
+        if: steps.release-meta.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ steps.release-meta.outputs.release_notes }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ steps.release-meta.outputs.version }}
+        run: |
+          set -eu
+          title="mochad-docker ${RELEASE_VERSION}"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --title "$title" \
+              --notes-file "$RELEASE_NOTES" \
+              --latest
+          else
+            gh release create "$RELEASE_TAG" \
+              --verify-tag \
+              --title "$title" \
+              --notes-file "$RELEASE_NOTES" \
+              --latest
+          fi
