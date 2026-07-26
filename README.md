@@ -143,9 +143,9 @@ The current `0.4.x` line is a cautious public beta. CI validates both supported
 architectures, metadata, permissions, and CLI startup. Physical USB operation
 requires separately recorded CM15A or CM19A evidence.
 
-Use a tagged image or exact immutable build inputs, not a moving development
-branch, for release testing. See [compatibility](docs/compatibility.md) and
-[release evidence](RELEASE_EVIDENCE.md).
+For release testing, use `ghcr.io/monsterray/mochad-docker:0.4.0` or exact
+immutable build inputs, not a moving branch. Confirm the tag exists in GHCR.
+See [compatibility](docs/compatibility.md) and [release evidence](RELEASE_EVIDENCE.md).
 
 ## Documentation
 
