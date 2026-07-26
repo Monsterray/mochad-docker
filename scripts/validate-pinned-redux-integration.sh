@@ -40,7 +40,7 @@ test "$build_sha" = "$redux_sha"
 
 workdir="$(mktemp -d)"
 cleanup() {
-    rm -rf "$workdir"
+    rm -rf "$workdir" 2>/dev/null || sudo rm -rf "$workdir"
 }
 trap cleanup EXIT
 
