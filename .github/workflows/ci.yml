@@ -1,6 +1,16 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      mochad_repository:
+        description: Exact mochad-redux repository to validate
+        required: false
+        default: https://github.com/Monsterray/mochad-redux
+      mochad_ref:
+        description: Exact mochad-redux branch, tag, or commit to validate
+        required: false
+        default: develop
   push:
     branches:
       - master
@@ -41,8 +51,8 @@ jobs:
       - name: Prepare build metadata
         id: meta
         env:
-          MOCHAD_REPOSITORY: https://github.com/Monsterray/mochad-redux.git
-          MOCHAD_REF: develop
+          MOCHAD_REPOSITORY: ${{ inputs.mochad_repository || 'https://github.com/Monsterray/mochad-redux' }}
+          MOCHAD_REF: ${{ inputs.mochad_ref || 'develop' }}
         run: |
           set -eu
           created="$(git show -s --format=%cI "$GITHUB_SHA")"
@@ -58,6 +68,7 @@ jobs:
           {
             echo "created=$created"
             echo "alpine_digest=$alpine_digest"
+            echo "redux_repository=$MOCHAD_REPOSITORY"
             echo "redux_revision=$redux_revision"
             echo "redux_version=$redux_version"
           } >> "$GITHUB_OUTPUT"
@@ -83,7 +94,7 @@ jobs:
         run: |
           docker build \
             --pull \
-            --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
+            --build-arg MOCHAD_REPOSITORY="${{ steps.meta.outputs.redux_repository }}" \
             --build-arg MOCHAD_REF="${{ steps.meta.outputs.redux_revision }}" \
             --build-arg MOCHAD_SOURCE_SHA="${{ steps.meta.outputs.redux_revision }}" \
             --build-arg BUILD_DATE="${{ steps.meta.outputs.created }}" \
@@ -100,6 +111,13 @@ jobs:
 
       - name: Validate OCI labels
         run: scripts/validate-image-labels.sh x10-mochad:ci-redux
+
+      - name: Validate pinned image integration
+        run: |
+          scripts/validate-pinned-redux-integration.sh \
+            x10-mochad:ci-redux \
+            "${{ steps.meta.outputs.redux_revision }}" \
+            "${{ steps.meta.outputs.redux_version }}"
 
       - name: Build and smoke test each platform
         env:
@@ -122,7 +140,7 @@ jobs:
               --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
               --build-arg ALPINE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
               --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
-              --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
+              --build-arg MOCHAD_REPOSITORY="${{ steps.meta.outputs.redux_repository }}" \
               --build-arg MOCHAD_REF="$REDUX_REVISION" \
               --build-arg MOCHAD_SOURCE_SHA="$REDUX_REVISION" \
               --build-arg MOCHAD_REDUX_REVISION="$REDUX_REVISION" \
@@ -151,7 +169,7 @@ jobs:
             --build-arg ALPINE_BASE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
             --build-arg ALPINE_IMAGE="docker.io/library/alpine@$ALPINE_DIGEST" \
             --build-arg ALPINE_DIGEST="$ALPINE_DIGEST" \
-            --build-arg MOCHAD_REPOSITORY=https://github.com/Monsterray/mochad-redux.git \
+            --build-arg MOCHAD_REPOSITORY="${{ steps.meta.outputs.redux_repository }}" \
             --build-arg MOCHAD_REF="$REDUX_REVISION" \
             --build-arg MOCHAD_SOURCE_SHA="$REDUX_REVISION" \
             --build-arg MOCHAD_REDUX_REVISION="$REDUX_REVISION" \
