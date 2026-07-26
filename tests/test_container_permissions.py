@@ -18,6 +18,10 @@ class ContainerPermissionsTests(unittest.TestCase):
             ["sh", "-n", str(ROOT / "mochad-entrypoint.sh")],
             check=True,
         )
+        subprocess.run(
+            ["bash", "-n", str(ROOT / "scripts" / "validate-pinned-redux-integration.sh")],
+            check=True,
+        )
 
     def test_entrypoint_prepares_config_and_validates_usb_before_drop(self) -> None:
         entrypoint = (ROOT / "mochad-entrypoint.sh").read_text()
@@ -54,7 +58,14 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertIn("/usr/share/licenses/mochad-redux", dockerfile)
         self.assertIn("COPY LICENSE.md /usr/share/licenses/mochad-docker/LICENSE.md", dockerfile)
         self.assertIn("/tmp/runtime-licenses/mochad-redux/", dockerfile)
-        self.assertIn("COPYING NOTICE docs/source-lineage.md", dockerfile)
+        self.assertIn("lineage_source=docs/research/source-lineage.md", dockerfile)
+        self.assertIn(
+            "/tmp/install/usr/local/share/mochad-redux/templates/"
+            "91-usb-x10-controllers.rules.in",
+            dockerfile,
+        )
+        self.assertNotIn("/src/udev/", dockerfile)
+        self.assertNotIn("/src/systemd/", dockerfile)
         self.assertIn('org.opencontainers.image.licenses="MIT AND GPL-3.0-or-later"', dockerfile)
 
     def test_dockerfile_uses_a_runtime_libusb_package_and_configurable_base(self) -> None:
@@ -77,6 +88,15 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertIn("MOCHAD_REDUX_REVISION=${{ steps.release-meta.outputs.redux_sha }}", workflow)
         self.assertIn("ALPINE_BASE_IMAGE=docker.io/library/alpine@${{ steps.release-meta.outputs.alpine_digest }}", workflow)
         self.assertIn("REQUIRE_AUDITED_SOURCE=true", workflow)
+
+    def test_ci_supports_exact_pinned_redux_integration(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
+
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("mochad_repository:", workflow)
+        self.assertIn("mochad_ref:", workflow)
+        self.assertIn("redux_repository=$MOCHAD_REPOSITORY", workflow)
+        self.assertIn("validate-pinned-redux-integration.sh", workflow)
 
     def test_packaging_version_surfaces_match_canonical_version(self) -> None:
         version = (ROOT / "VERSION").read_text().strip()

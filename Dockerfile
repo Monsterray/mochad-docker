@@ -44,7 +44,7 @@ RUN make DESTDIR=/tmp/install install
 
 RUN set -eux; \
     mkdir -p /tmp/runtime-licenses/mochad-redux; \
-    for file in COPYING NOTICE docs/source-lineage.md; do \
+    for file in COPYING NOTICE; do \
         if [ -f "$file" ]; then \
             mkdir -p "/tmp/runtime-licenses/mochad-redux/$(dirname "$file")"; \
             cp "$file" "/tmp/runtime-licenses/mochad-redux/$file"; \
@@ -54,7 +54,29 @@ RUN set -eux; \
         else \
             printf 'Source checkout did not provide %s. Use audited mochad-redux source for release images.\n' "$file" > "/tmp/runtime-licenses/mochad-redux/$(basename "$file").missing"; \
         fi; \
-    done
+    done; \
+    lineage_source=docs/research/source-lineage.md; \
+    if [ -f "$lineage_source" ]; then \
+        mkdir -p /tmp/runtime-licenses/mochad-redux/docs; \
+        cp "$lineage_source" /tmp/runtime-licenses/mochad-redux/docs/source-lineage.md; \
+    elif [ "$REQUIRE_AUDITED_SOURCE" = "true" ]; then \
+        echo "Required audited source file is missing: $lineage_source" >&2; \
+        exit 1; \
+    else \
+        printf 'Source checkout did not provide %s. Use audited mochad-redux source for release images.\n' "$lineage_source" > /tmp/runtime-licenses/mochad-redux/source-lineage.md.missing; \
+    fi; \
+    mkdir -p /tmp/runtime-support; \
+    installed_udev=/tmp/install/usr/local/share/mochad-redux/templates/91-usb-x10-controllers.rules.in; \
+    if [ -f "$installed_udev" ]; then \
+        sed 's/@USB_GROUP@/x10/g' "$installed_udev" > /tmp/runtime-support/91-usb-x10-controllers.rules; \
+    else \
+        legacy_udev="$(find /src -type f -name 91-usb-x10-controllers.rules -print -quit)"; \
+        if [ -z "$legacy_udev" ]; then \
+            echo "Installed source did not provide a USB udev rule" >&2; \
+            exit 1; \
+        fi; \
+        cp "$legacy_udev" /tmp/runtime-support/91-usb-x10-controllers.rules; \
+    fi
 
 
 ###############################################################################
@@ -105,7 +127,7 @@ COPY --from=builder \
 
 # Docker doesn't like systemd files or udev rules
 COPY --from=builder \
-    /src/udev/91-usb-x10-controllers.rules \
+    /tmp/runtime-support/91-usb-x10-controllers.rules \
     /usr/share/mochad/91-usb-x10-controllers.rules
 
 RUN mkdir -p /usr/share/licenses/mochad-docker /usr/share/licenses/mochad-redux
@@ -126,11 +148,6 @@ RUN set -eu; \
     printf '  "alpine_digest": "%s"\n' "$ALPINE_DIGEST" >> /usr/share/mochad-docker/build-info.json; \
     printf '}\n' >> /usr/share/mochad-docker/build-info.json; \
     rm /usr/share/mochad-docker/mochad-source-revision
-#
-# COPY --from=builder \
-#     /src/systemd/mochad.service \
-#     /usr/share/mochad/mochad.service
-
 EXPOSE 1099/tcp 1100/tcp 1101/tcp
 
 COPY mochad-entrypoint.sh /usr/local/bin/mochad-entrypoint.sh
