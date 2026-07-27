@@ -5,6 +5,11 @@ file.
 
 ## [Unreleased]
 
+### Added
+
+- A host-side sanitized support-bundle collector for allowlisted image,
+  Compose, runtime identity, USB permission, and bounded log diagnostics.
+
 ## [0.4.0] - 2026-07-16
 
 ### Added
