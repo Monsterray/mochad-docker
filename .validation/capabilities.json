@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "repository": "mochad-docker",
+  "repository_type": "container-packaging",
+  "canonical_url": "https://github.com/Monsterray/mochad-docker.git",
+  "profiles": {
+    "local": {
+      "docs": {"priority": 10, "commands": [["scripts/validate/version-consistency.sh"]]},
+      "source": {
+        "priority": 20,
+        "commands": [
+          ["sh", "-n", "mochad-entrypoint.sh"],
+          ["python3", "-m", "unittest", "discover", "-s", "tests"],
+          ["scripts/validate/version-consistency.sh"]
+        ]
+      }
+    },
+    "ubuntu": {
+      "source": {"priority": 20, "delegate": "validate-bundle.sh"}
+    }
+  },
+  "path_rules": [
+    {"pattern": ".validation/**", "owner": "validation-policy", "local_profile": "source", "ubuntu_profile": "source"},
+    {"pattern": "Dockerfile", "owner": "image-build", "local_profile": "source", "ubuntu_profile": "source", "docker": true},
+    {"pattern": "docker-compose*.yml", "owner": "compose", "local_profile": "source", "ubuntu_profile": "source", "docker": true},
+    {"pattern": "mochad-entrypoint.sh", "owner": "container-runtime", "local_profile": "source", "ubuntu_profile": "source", "docker": true},
+    {"pattern": "tests/**", "owner": "packaging-tests", "local_profile": "source", "ubuntu_profile": "source", "docker": true},
+    {"pattern": "scripts/**", "owner": "release-validation-tooling", "local_profile": "source", "ubuntu_profile": "source", "docker": true},
+    {"pattern": "release/**", "owner": "release-inputs", "local_profile": "source", "ubuntu_profile": "source", "docker": true},
+    {"pattern": ".github/**", "owner": "ci", "local_profile": "docs", "ubuntu_profile": "source", "docker": true},
+    {"pattern": "docs/**", "owner": "documentation", "local_profile": "docs", "ubuntu_profile": null},
+    {"pattern": "validation/**", "owner": "release-evidence", "local_profile": "docs", "ubuntu_profile": null},
+    {"pattern": "*.md", "owner": "documentation", "local_profile": "docs", "ubuntu_profile": null},
+    {"pattern": ".dockerignore", "owner": "image-build", "local_profile": "source", "ubuntu_profile": "source", "docker": true},
+    {"pattern": ".env.example", "owner": "runtime-configuration", "local_profile": "source", "ubuntu_profile": "source", "docker": true},
+    {"pattern": ".gitignore", "owner": "repository-metadata", "local_profile": "docs", "ubuntu_profile": null},
+    {"pattern": "VERSION", "owner": "release-version", "local_profile": "source", "ubuntu_profile": "source", "docker": true}
+  ],
+  "available_validation_scripts": [
+    "scripts/validate/version-consistency.sh",
+    "scripts/validate-release.sh",
+    "scripts/validate-image-labels.sh",
+    "scripts/validate-oci-index.sh"
+  ],
+  "docker_integration": "required-separate-runner",
+  "hardware_boundary": "not-applicable",
+  "source_archive_required": false,
+  "staged_install_required": false,
+  "bridge_validation_venv": null
+}
