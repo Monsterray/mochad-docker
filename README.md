@@ -139,9 +139,9 @@ The packaging version comes from [VERSION](VERSION). The embedded daemon
 version and source SHA are tracked separately in
 [release/versions.env](release/versions.env) and image metadata.
 
-The current `0.4.x` line is a cautious public beta. CI validates both supported
-architectures, metadata, permissions, and CLI startup. Physical USB operation
-requires separately recorded CM15A or CM19A evidence.
+The current release line is a cautious public beta. CI validates both
+supported architectures, metadata, permissions, and CLI startup. Physical USB
+operation requires separately recorded CM15A or CM19A evidence.
 
 For release testing, use `ghcr.io/monsterray/mochad-docker:0.4.0` or exact
 immutable build inputs, not a moving branch. Confirm the tag exists in GHCR.
