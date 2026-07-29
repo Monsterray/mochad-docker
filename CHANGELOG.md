@@ -9,6 +9,8 @@ file.
 
 - A host-side sanitized support-bundle collector for allowlisted image,
   Compose, runtime identity, USB permission, and bounded log diagnostics.
+- Offline manifest-based backup and isolated, failure-atomic restore for
+  Compose topology, exact release pins, and allowlisted non-secret settings.
 
 ## [0.4.0] - 2026-07-16
 

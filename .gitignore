@@ -7,4 +7,5 @@ __pycache__/
 *.log
 *support-bundle*.tar.gz
 mochad-docker-support*.tar.gz
+*backup*.tar.gz
 docker-compose.override.yml
