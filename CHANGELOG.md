@@ -5,6 +5,11 @@ file.
 
 ## [Unreleased]
 
+### Added
+
+- Offline manifest-based backup and isolated, failure-atomic restore for
+  Compose topology, exact release pins, and allowlisted non-secret settings.
+
 ## [0.4.0] - 2026-07-16
 
 ### Added

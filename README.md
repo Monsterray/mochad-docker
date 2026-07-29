@@ -152,6 +152,7 @@ See [compatibility](docs/compatibility.md) and [release evidence](RELEASE_EVIDEN
 - [Configuration reference](docs/configuration.md)
 - [Compatibility and version mapping](docs/compatibility.md)
 - [Release engineering](docs/release-engineering.md)
+- [Deployment backup and isolated restore](docs/backup-and-restore.md)
 - [Release checklist](RELEASE_CHECKLIST.md)
 - [Security policy](SECURITY.md)
 - [Contribution guide](CONTRIBUTING.md)
