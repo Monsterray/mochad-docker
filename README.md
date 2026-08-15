@@ -183,72 +183,86 @@ It does not duplicate the daemon's protocol unit tests.
 
 ## Windows Development
 
-This repository packages a Linux daemon into a Linux container. The
-consequential parts of the work — building the image, running the
-container, and USB passthrough to the CM15A/CM19A — require Docker and a
-Linux container runtime. On Windows that means Docker Desktop with the WSL2
-backend, or working directly inside WSL2.
+This repo packages a Linux daemon into a Linux container. The work that matters — building the image,
+running it, USB passthrough — needs Docker with a Linux runtime. On Windows that means **Docker Desktop
+with the WSL2 backend**, or working inside WSL2 directly.
 
-USB device passthrough to a container does not work through Docker Desktop
-on Windows the way it does on Linux: the Compose file's `/dev/bus/usb` mount
-and `device_cgroup_rules` target a real Linux USB subsystem. Hardware
-validation against a CM15A or CM19A must happen on a Linux host or a Pi, not
-on a Windows machine.
+> [!WARNING]
+> **USB passthrough does not work through Docker Desktop on Windows.** The Compose file's
+> `/dev/bus/usb` mount and `device_cgroup_rules` target a real Linux USB subsystem. Hardware validation
+> against a CM15A or CM19A must happen on a Linux host or a Pi — not on a Windows machine.
 
-### Native Windows Setup
+### Minimum setup
 
-The plain-Python parts of the test suite run under native Windows Python
-(measured with Python 3.12.10):
-
-```sh
+```powershell
+git clone -c core.autocrlf=false https://github.com/Monsterray/mochad-docker.git
 python -m venv .venv
 .venv\Scripts\python -m pip install pytest ruff bandit shellcheck-py
 .venv\Scripts\python -m pytest tests
 ```
 
-Measured result on this machine: `23 passed, 7 failed, 1 skipped`. All 7
-failures are Windows platform artifacts, not product bugs:
+Expect **`23 passed, 7 failed, 1 skipped`** on Windows. All 7 failures are platform artifacts, not
+product bugs. Most of this suite is shell- and container-oriented, so run it in WSL2 for a real result.
 
-- `bash -n` syntax checks on `mochad-entrypoint.sh` and
-  `scripts/validate-pinned-redux-integration.sh` fail with exit code 127
-  when `bash` is not on `PATH`.
-- Executing a `.sh` script directly fails with
-  `OSError: [WinError 193] %1 is not a valid Win32 application`.
-- Invoking `python3` fails with exit code `9009`; Windows has no `python3`
-  command, only `python`.
-- A POSIX file-mode assertion fails with `AssertionError: 384 != 438`
-  (`0o600` vs `0o666`); Windows does not honor POSIX permission bits.
+> [!IMPORTANT]
+> **Always clone with `core.autocrlf=false`.** This matters more here than anywhere else in the family:
+> `mochad-entrypoint.sh` is `COPY`ed into the image, and a CRLF entrypoint fails at container start with
+> a confusing `exec format error` or `no such file or directory`.
+>
+> Already cloned the wrong way? `git config` alone does not rewrite the working tree:
+> ```bash
+> git config core.autocrlf false && git rm --cached -r . && git reset --hard
+> ```
 
-Most of this repository's test suite is shell- and container-oriented and is
-better run under WSL2, where these platform mismatches do not apply.
+<details>
+<summary><b>Why the 7 Windows failures happen</b></summary>
 
-### Windows Gotchas
+<br>
 
-- **Clone with CRLF conversion off**: `git clone -c core.autocrlf=false ...`
-  (or run `git config core.autocrlf false` in an existing clone). This
-  matters more here than elsewhere in the project family:
-  `mochad-entrypoint.sh` is `COPY`ed into the image, and a CRLF entrypoint
-  fails at container start with a confusing `exec format error` or `no such
-  file or directory`. It also causes shellcheck to emit spurious `SC1017
-  literal carriage return` errors.
-- `python3` does not exist on Windows; use `python`.
-- `bash` must be on `PATH` for the shell syntax tests. Git Bash provides it.
-- `scripts/backup/backup_restore.py` and
-  `scripts/support/collect-support-bundle.py` run fine under Windows Python
-  for unit testing, but their real targets are container paths.
-
-### Where Each Task Can Run
-
-| Task | Where |
+| Cause | Detail |
 | --- | --- |
-| Edit code | Windows native |
-| Python unit tests | Windows native |
-| Shell syntax tests (`bash -n`) | Windows native with Git Bash on `PATH`, or WSL2 |
-| `docker build` | Docker Desktop + WSL2 |
-| Run the container | Docker Desktop + WSL2 |
-| USB passthrough / hardware validation | Linux host or Pi required |
-| Multi-arch release build | Docker Desktop + WSL2 |
-| shellcheck | Windows native (`shellcheck-py`) |
+| `bash -n` syntax checks | `mochad-entrypoint.sh` and `scripts/validate-pinned-redux-integration.sh` exit `127` without `bash` on PATH |
+| Executing a `.sh` directly | `WinError 193 %1 is not a valid Win32 application` |
+| Invoking `python3` | Exit `9009` — Windows has no `python3`, only `python` |
+| POSIX file mode | `384 != 438` (`0o600` vs `0o666`). Windows has no POSIX permission bits |
+
+</details>
+
+<details>
+<summary><b>Gotchas and troubleshooting</b></summary>
+
+<br>
+
+- **`python3` does not exist on Windows** — the command is `python`.
+- **Keep `bash` on PATH** (Git Bash) for the shell syntax tests.
+- **Set `PYTHONUTF8=1`** — the console is cp1252/IBM437 and printing any non-ASCII character raises
+  `UnicodeEncodeError`. Persist it with
+  `[Environment]::SetEnvironmentVariable('PYTHONUTF8','1','User')`, then open a new terminal.
+- **Never "fix" a POSIX file-mode failure on Windows.** The assertion is correct; the platform is wrong.
+- `scripts/backup/backup_restore.py` and `scripts/support/collect-support-bundle.py` unit-test fine
+  under Windows Python, but their real targets are container paths.
+
+| Symptom | Fix |
+| --- | --- |
+| `exec format error` at container start | CRLF entrypoint — reclone per above, rebuild the image |
+| `UnicodeEncodeError: 'charmap' codec` | Set `PYTHONUTF8=1` |
+| `exit code 9009` | Something called `python3`; use `python` |
+| `exit code 127` | `bash` not on PATH |
+| `WinError 193` | Executing a `.sh` directly — expected, run it in WSL |
+
+</details>
+
+### Where each task runs
+
+| Task | Windows | Docker Desktop + WSL2 | Linux host required |
+| --- | --- | --- | --- |
+| Edit code, `git` | Yes | Yes | — |
+| Python unit tests | Partial — 23 pass | Yes | — |
+| Shell syntax tests | With Git Bash | Yes | — |
+| `docker build` / run container | No | Yes | — |
+| Multi-arch release build | No | Yes | — |
+| **USB passthrough / hardware validation** | **No** | **No** | **Yes** |
+| shellcheck | Yes (`shellcheck-py`) | Yes | — |
 
 ## Related Projects
 
