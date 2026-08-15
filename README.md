@@ -181,6 +181,75 @@ CI validates Compose, source identity, runtime permissions, filesystem
 ownership, packages, metadata, health checks, and both target architectures.
 It does not duplicate the daemon's protocol unit tests.
 
+## Windows Development
+
+This repository packages a Linux daemon into a Linux container. The
+consequential parts of the work — building the image, running the
+container, and USB passthrough to the CM15A/CM19A — require Docker and a
+Linux container runtime. On Windows that means Docker Desktop with the WSL2
+backend, or working directly inside WSL2.
+
+USB device passthrough to a container does not work through Docker Desktop
+on Windows the way it does on Linux: the Compose file's `/dev/bus/usb` mount
+and `device_cgroup_rules` target a real Linux USB subsystem. Hardware
+validation against a CM15A or CM19A must happen on a Linux host or a Pi, not
+on a Windows machine.
+
+### Native Windows Setup
+
+The plain-Python parts of the test suite run under native Windows Python
+(measured with Python 3.12.10):
+
+```sh
+python -m venv .venv
+.venv\Scripts\python -m pip install pytest ruff bandit shellcheck-py
+.venv\Scripts\python -m pytest tests
+```
+
+Measured result on this machine: `23 passed, 7 failed, 1 skipped`. All 7
+failures are Windows platform artifacts, not product bugs:
+
+- `bash -n` syntax checks on `mochad-entrypoint.sh` and
+  `scripts/validate-pinned-redux-integration.sh` fail with exit code 127
+  when `bash` is not on `PATH`.
+- Executing a `.sh` script directly fails with
+  `OSError: [WinError 193] %1 is not a valid Win32 application`.
+- Invoking `python3` fails with exit code `9009`; Windows has no `python3`
+  command, only `python`.
+- A POSIX file-mode assertion fails with `AssertionError: 384 != 438`
+  (`0o600` vs `0o666`); Windows does not honor POSIX permission bits.
+
+Most of this repository's test suite is shell- and container-oriented and is
+better run under WSL2, where these platform mismatches do not apply.
+
+### Windows Gotchas
+
+- **Clone with CRLF conversion off**: `git clone -c core.autocrlf=false ...`
+  (or run `git config core.autocrlf false` in an existing clone). This
+  matters more here than elsewhere in the project family:
+  `mochad-entrypoint.sh` is `COPY`ed into the image, and a CRLF entrypoint
+  fails at container start with a confusing `exec format error` or `no such
+  file or directory`. It also causes shellcheck to emit spurious `SC1017
+  literal carriage return` errors.
+- `python3` does not exist on Windows; use `python`.
+- `bash` must be on `PATH` for the shell syntax tests. Git Bash provides it.
+- `scripts/backup/backup_restore.py` and
+  `scripts/support/collect-support-bundle.py` run fine under Windows Python
+  for unit testing, but their real targets are container paths.
+
+### Where Each Task Can Run
+
+| Task | Where |
+| --- | --- |
+| Edit code | Windows native |
+| Python unit tests | Windows native |
+| Shell syntax tests (`bash -n`) | Windows native with Git Bash on `PATH`, or WSL2 |
+| `docker build` | Docker Desktop + WSL2 |
+| Run the container | Docker Desktop + WSL2 |
+| USB passthrough / hardware validation | Linux host or Pi required |
+| Multi-arch release build | Docker Desktop + WSL2 |
+| shellcheck | Windows native (`shellcheck-py`) |
+
 ## Related Projects
 
 - [mochad-redux](https://github.com/Monsterray/mochad-redux)
