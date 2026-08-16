@@ -81,18 +81,24 @@ _KEYWORD = r"(?:auth|authorization|password|passwd|secret|token|api[_-]?key)"
 
 SECRET_PATTERNS = {
     "private_key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    # The "not already redacted" guard sits immediately after the
+    # single-character [=:]. Placed after the following \s*, the engine
+    # backtracks one space, evaluates it against " [REDACTED:...", finds it
+    # passes, and flags the line anyway -- which fails the build on every
+    # bundle that contains a sanitised Authorization header.
     "credential_assignment": re.compile(
-        rf"(?i){_KEY_PREFIX}{_KEYWORD}{_KEY_SUFFIX}\s*[=:]\s*"
-        r"(?![\"']?\[REDACTED:)"
+        rf"(?i){_KEY_PREFIX}{_KEYWORD}{_KEY_SUFFIX}\s*[=:]"
+        r"(?!\s*[\"']?\[REDACTED:)\s*"
     ),
-    "url_userinfo": re.compile(r"\b[a-z][a-z0-9+.-]*://[^/\s@]+@"),
+    "url_userinfo": re.compile(
+        r"\b[a-z][a-z0-9+.-]*://(?!\[REDACTED:)[^/\s@]+@"),
 }
 FORBIDDEN_FILENAME = re.compile(
     r"(?i)(?:^|/)(?:\.env(?:[./]|$)|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?$|"
     r"[^/]*(?:credential|password|private[-_]?key|secret|token)[^/]*$)"
 )
 HIGH_ENTROPY_CANDIDATE = re.compile(r"(?<![A-Za-z0-9])[A-Za-z0-9_+/=-]{32,}(?![A-Za-z0-9])")
-URL_USERINFO = re.compile(r"\b([a-z][a-z0-9+.-]*://)[^/\s@]+@", re.I)
+URL_USERINFO = re.compile(r"\b([a-z][a-z0-9+.-]*://)(?!\[REDACTED:)[^/\s@]+@", re.I)
 PRIVATE_KEY_BLOCK = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----",
     re.S,
