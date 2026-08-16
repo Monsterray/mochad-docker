@@ -181,8 +181,10 @@ def redact_text(text: str, aliases: Aliases) -> tuple[str, list[str]]:
         text = URL_USERINFO.sub(r"\1[REDACTED:url_userinfo]@", text)
         applied.add("url_userinfo")
     if CREDENTIAL_VALUE.search(text):
-        text = CREDENTIAL_VALUE.sub(r"\1[REDACTED:credential]", text)
-        applied.add("credential")
+        # "secret" matches the name both sibling collectors use for this class,
+        # so one support engineer reading three bundles sees one vocabulary.
+        text = CREDENTIAL_VALUE.sub(r"\1[REDACTED:secret]", text)
+        applied.add("secret")
 
     lines = []
     for line in text.splitlines():

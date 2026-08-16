@@ -261,7 +261,7 @@ class SupportBundleTests(unittest.TestCase):
         self.assertNotIn("hidden", redacted)
         self.assertIn("HOST_1", redacted)
         self.assertIn("[REDACTED:security_rf]", redacted)
-        self.assertIn("[REDACTED:credential]", redacted)
+        self.assertIn("[REDACTED:secret]", redacted)
         self.assertIn("security_rf", applied)
 
     def test_docker_log_collection_includes_both_streams(self) -> None:
