@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -67,30 +68,53 @@ ALLOWED_ENVIRONMENT_KEYS = {
     "USB_GID",
 }
 
+# `_` is a word character, so a plain `\b` cannot see a keyword embedded in an
+# underscore-joined identifier such as DB_PASSWORD or MQTT_TLS_KEY_PASSWORD --
+# the boundary check right before/after the keyword never fires. These two
+# fragments treat a chain of underscore-joined alnum segments on either side
+# of the keyword as part of the same identifier, so the keyword is still
+# recognised wherever it appears as a whole segment of a longer name (this
+# generalises what used to be one-off literal entries like "mqtt_password").
+_KEY_PREFIX = r'''(?:^|[^A-Za-z0-9])["']?(?:[A-Za-z0-9]+_)*'''
+_KEY_SUFFIX = r'''(?:_[A-Za-z0-9]+)*["']?'''
+_KEYWORD = r"(?:auth|authorization|password|passwd|secret|token|api[_-]?key)"
+_SECRET_VALUE = (
+    r'''(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|'''
+    r"(?:(?:Bearer|Basic)\s+)?[^\s,;{\[]+)"
+)
+
 SECRET_PATTERNS = {
     "private_key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    # The "not already redacted" guard sits immediately after the
+    # single-character [=:]. Placed after the following \s*, the engine
+    # backtracks one space, evaluates it against " [REDACTED:...", finds it
+    # passes, and flags the line anyway -- which fails the build on every
+    # bundle that contains a sanitised Authorization header.
     "credential_assignment": re.compile(
-        r"(?i)\b(?:auth|authorization|password|passwd|secret|token|"
-        r"mqtt_password|tls_key_password)\b\s*[=:]\s*"
-        r"(?![\"']?\[REDACTED:)"
+        rf"(?i){_KEY_PREFIX}{_KEYWORD}{_KEY_SUFFIX}\s*[=:]"
+        r"(?!\s*\[REDACTED:)\s*" + _SECRET_VALUE
     ),
-    "url_userinfo": re.compile(r"\b[a-z][a-z0-9+.-]*://[^/\s:@]+:[^/\s@]+@"),
+    "url_userinfo": re.compile(
+        r"\b[a-z][a-z0-9+.-]*://(?!\[REDACTED:)[^/\s@]+@"),
 }
 FORBIDDEN_FILENAME = re.compile(
     r"(?i)(?:^|/)(?:\.env(?:[./]|$)|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?$|"
     r"[^/]*(?:credential|password|private[-_]?key|secret|token)[^/]*$)"
 )
 HIGH_ENTROPY_CANDIDATE = re.compile(r"(?<![A-Za-z0-9])[A-Za-z0-9_+/=-]{32,}(?![A-Za-z0-9])")
-URL_USERINFO = re.compile(r"\b([a-z][a-z0-9+.-]*://)[^/\s:@]+:[^/\s@]+@", re.I)
+URL_USERINFO = re.compile(r"\b([a-z][a-z0-9+.-]*://)(?!\[REDACTED:)[^/\s@]+@", re.I)
 PRIVATE_KEY_BLOCK = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----",
     re.S,
 )
 CREDENTIAL_VALUE = re.compile(
-    r"(?i)(\b(?:auth|authorization|password|passwd|secret|token|"
-    r"mqtt_password|tls_key_password)\b\s*[=:]\s*)[^\s,;]+"
+    rf"(?i)({_KEY_PREFIX}{_KEYWORD}{_KEY_SUFFIX}\s*[=:]\s*)"
+    + _SECRET_VALUE
 )
 IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+IPV6_CANDIDATE = re.compile(
+    r"(?<![0-9A-Fa-f:])(?:[0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}(?![0-9A-Fa-f:])"
+)
 ABSOLUTE_PATH = re.compile(r"(?<![\w.])/(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+")
 
 
@@ -114,6 +138,12 @@ class Aliases:
         return values[text]
 
 
+# Public alias so external tooling (e.g. the cross-repo redaction-conformance
+# harness) can construct a real pseudonymizer by the same name the other two
+# collectors expose, instead of falling back to a plain dict that silently
+# skips pseudonymization.
+
+
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -132,6 +162,17 @@ def _safe_url(value: str) -> str:
     return urlunsplit((parsed.scheme, hostname, parsed.path, parsed.query, parsed.fragment))
 
 
+def _pseudonymize_ipv6(match: "re.Match[str]", aliases: Aliases) -> str:
+    candidate = match.group()
+    try:
+        address = ipaddress.ip_address(candidate)
+    except ValueError:
+        return candidate
+    if address.version != 6:
+        return candidate
+    return aliases.get("host", candidate)
+
+
 def redact_text(text: str, aliases: Aliases) -> tuple[str, list[str]]:
     applied: set[str] = set()
     if PRIVATE_KEY_BLOCK.search(text):
@@ -141,8 +182,10 @@ def redact_text(text: str, aliases: Aliases) -> tuple[str, list[str]]:
         text = URL_USERINFO.sub(r"\1[REDACTED:url_userinfo]@", text)
         applied.add("url_userinfo")
     if CREDENTIAL_VALUE.search(text):
-        text = CREDENTIAL_VALUE.sub(r"\1[REDACTED:credential]", text)
-        applied.add("credential")
+        # "secret" matches the name both sibling collectors use for this class,
+        # so one support engineer reading three bundles sees one vocabulary.
+        text = CREDENTIAL_VALUE.sub(r"\1[REDACTED:secret]", text)
+        applied.add("secret")
 
     lines = []
     for line in text.splitlines():
@@ -156,6 +199,7 @@ def redact_text(text: str, aliases: Aliases) -> tuple[str, list[str]]:
             applied.add("hardware_serial")
             continue
         line = IPV4.sub(lambda match: aliases.get("host", match.group()), line)
+        line = IPV6_CANDIDATE.sub(lambda match: _pseudonymize_ipv6(match, aliases), line)
         line = ABSOLUTE_PATH.sub(lambda match: aliases.get("path", match.group()), line)
         lines.append(line)
     suffix = "\n" if text.endswith("\n") else ""
