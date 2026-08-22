@@ -78,6 +78,7 @@ class SupportBundleTests(unittest.TestCase):
     def test_secret_or_forbidden_filename_fails_closed(self) -> None:
         cases = (
             ("safe.txt", "password=correct-horse-battery-staple\n"),
+            ("safe.json", '"MQTT_PASSWORD": "correct horse battery staple"\n'),
             (".env", "SAFE=true\n"),
             ("safe.txt", "token_abcdEFGHijklMNOPqrstUVWXyz0123456789\n"),
         )
@@ -247,6 +248,7 @@ class SupportBundleTests(unittest.TestCase):
                 "connecting to 192.168.8.99 from /home/alice/config",
                 "Security RF identifier 123456",
                 "password=hidden",
+                '"MQTT_PASSWORD": "json hidden value"',
             ]
         )
         redacted, applied = support_bundle.bound_log(
@@ -259,6 +261,7 @@ class SupportBundleTests(unittest.TestCase):
         self.assertNotIn("/home/alice/config", redacted)
         self.assertNotIn("123456", redacted)
         self.assertNotIn("hidden", redacted)
+        self.assertNotIn("json hidden value", redacted)
         self.assertIn("HOST_1", redacted)
         self.assertIn("[REDACTED:security_rf]", redacted)
         self.assertIn("[REDACTED:secret]", redacted)

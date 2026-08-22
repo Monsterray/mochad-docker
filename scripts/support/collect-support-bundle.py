@@ -75,9 +75,13 @@ ALLOWED_ENVIRONMENT_KEYS = {
 # of the keyword as part of the same identifier, so the keyword is still
 # recognised wherever it appears as a whole segment of a longer name (this
 # generalises what used to be one-off literal entries like "mqtt_password").
-_KEY_PREFIX = r"(?:^|[^A-Za-z0-9])(?:[A-Za-z0-9]+_)*"
-_KEY_SUFFIX = r"(?:_[A-Za-z0-9]+)*"
+_KEY_PREFIX = r'''(?:^|[^A-Za-z0-9])["']?(?:[A-Za-z0-9]+_)*'''
+_KEY_SUFFIX = r'''(?:_[A-Za-z0-9]+)*["']?'''
 _KEYWORD = r"(?:auth|authorization|password|passwd|secret|token|api[_-]?key)"
+_SECRET_VALUE = (
+    r'''(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|'''
+    r"(?:(?:Bearer|Basic)\s+)?[^\s,;{\[]+)"
+)
 
 SECRET_PATTERNS = {
     "private_key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
@@ -88,7 +92,7 @@ SECRET_PATTERNS = {
     # bundle that contains a sanitised Authorization header.
     "credential_assignment": re.compile(
         rf"(?i){_KEY_PREFIX}{_KEYWORD}{_KEY_SUFFIX}\s*[=:]"
-        r"(?!\s*[\"']?\[REDACTED:)\s*"
+        r"(?!\s*\[REDACTED:)\s*" + _SECRET_VALUE
     ),
     "url_userinfo": re.compile(
         r"\b[a-z][a-z0-9+.-]*://(?!\[REDACTED:)[^/\s@]+@"),
@@ -105,10 +109,7 @@ PRIVATE_KEY_BLOCK = re.compile(
 )
 CREDENTIAL_VALUE = re.compile(
     rf"(?i)({_KEY_PREFIX}{_KEYWORD}{_KEY_SUFFIX}\s*[=:]\s*)"
-    # "Authorization: Bearer <token>" / "Authorization: Basic <b64>" put the
-    # scheme word before the actual credential; consume it too so the whole
-    # credential is captured instead of stopping at the scheme word.
-    r"(?:(?:Bearer|Basic)\s+)?[^\s,;]+"
+    + _SECRET_VALUE
 )
 IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 IPV6_CANDIDATE = re.compile(
