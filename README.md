@@ -154,6 +154,7 @@ See [compatibility](docs/compatibility.md) and [release evidence](RELEASE_EVIDEN
 - [Release engineering](docs/release-engineering.md)
 - [Sanitized support bundles](docs/support-bundles.md)
 - [Deployment backup and isolated restore](docs/backup-and-restore.md)
+- [Test strategy](docs/test-strategy.md)
 - [Release checklist](RELEASE_CHECKLIST.md)
 - [Security policy](SECURITY.md)
 - [Contribution guide](CONTRIBUTING.md)
