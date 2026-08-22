@@ -34,6 +34,24 @@ contract rather than a lower build count alone.
 The tag-only `Release Image` workflow owns publishing. Pull requests and normal
 branch pushes do not publish images or releases.
 
+## Develop Maintenance Record: 2026-08-22
+
+Baseline `6fa1ecb29d3f7bfdd4e6a6ece0c75d7996a53f52` includes PRs #9 and #10.
+The support-bundle collector now redacts quoted JSON-style credential values
+without matching its own replacement output. Keep the focused redaction tests
+when changing collection or serialization.
+
+An older `test-simplification/mochad-docker` branch was reviewed and retired.
+Its ownership inventory became this document, but its workflow replacement was
+not used because it removed current upstream-source and exact pinned-Redux
+build coverage and renamed established checks. Improve CI only from current
+`develop`, preserving those contracts and proving replacement checks before
+changing branch protection.
+
+The reviewed redaction, documentation, and superseded simplification branches
+were deleted after their surviving work merged. Do not recreate them or copy
+their old workflow files back into `.github/workflows/`.
+
 ## Regression Boundaries
 
 Keep deterministic coverage for exact Redux SHA selection, standalone Compose
