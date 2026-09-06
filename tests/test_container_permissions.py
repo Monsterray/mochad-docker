@@ -1,5 +1,3 @@
-from io import BytesIO
-from pathlib import Path
 import json
 import os
 import re
@@ -7,7 +5,8 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
-
+from io import BytesIO
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 

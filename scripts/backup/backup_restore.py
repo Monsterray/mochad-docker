@@ -4,18 +4,17 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import hashlib
 import io
 import json
 import os
-from pathlib import Path, PurePosixPath
 import re
 import shutil
 import stat
 import subprocess
 import tarfile
-
+from datetime import datetime, timezone
+from pathlib import Path, PurePosixPath
 
 SCHEMA_VERSION = 1
 MAX_MEMBER_BYTES = 2 * 1024 * 1024
@@ -30,6 +29,26 @@ URL_CREDENTIAL_RE = re.compile(
     re.IGNORECASE,
 )
 PRIVATE_KEY_RE = re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY-----")
+
+# SECRET_RE above only ever runs against environment *key names* in
+# _environment_snapshot(); it was never applied to file content, so a
+# credential assigned inline in docker-compose.yml (a YAML `environment:`
+# block is the common place for one) backed up unmodified. This is the
+# same keyword-plus-assigned-value shape already proven in
+# scripts/support/collect-support-bundle.py's SECRET_PATTERNS -- copied
+# verbatim rather than re-derived, since a bare keyword match alone
+# over-flags (a "primary key: id" comment, a plain "password" mention
+# with no value ever assigned).
+_KEY_PREFIX = r'''(?:^|[^A-Za-z0-9])["']?(?:[A-Za-z0-9]+_)*'''
+_KEY_SUFFIX = r'''(?:_[A-Za-z0-9]+)*["']?'''
+_KEYWORD = r"(?:auth|authorization|password|passwd|secret|token|api[_-]?key)"
+_SECRET_VALUE = (
+    r'''(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|'''
+    r"(?:(?:Bearer|Basic)\s+)?[^\s,;{\[]+)"
+)
+CREDENTIAL_ASSIGNMENT_RE = re.compile(
+    rf"(?i){_KEY_PREFIX}{_KEYWORD}{_KEY_SUFFIX}\s*[=:]\s*" + _SECRET_VALUE
+)
 ALLOWED_ENV = frozenset(
     {
         "ALPINE_BASE_IMAGE",
@@ -98,6 +117,21 @@ def _check_content(name: str, data: bytes) -> None:
     if b"\0" in data:
         raise BackupError(f"{name} contains binary data")
     if PRIVATE_KEY_RE.search(data) or URL_CREDENTIAL_RE.search(data):
+        raise BackupError(f"{name} contains secret material")
+    # PRIVATE_KEY_RE and URL_CREDENTIAL_RE run on raw bytes, so no encoding
+    # can hide a match from them. CREDENTIAL_ASSIGNMENT_RE needs decoded
+    # text, and a "return" on a decode failure would silently skip it for
+    # the rest of the file -- one stray non-UTF-8 byte anywhere would bypass
+    # the whole check even if a plaintext credential sits in valid UTF-8
+    # right next to it. These files are already required to be plain text
+    # (the b"\0" check above), so failing to decode as UTF-8 is itself
+    # anomalous for a docker-compose.yml or .env file and should refuse the
+    # backup, not silently narrow what gets checked.
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise BackupError(f"{name} is not valid UTF-8: {exc}") from exc
+    if CREDENTIAL_ASSIGNMENT_RE.search(text):
         raise BackupError(f"{name} contains secret material")
 
 

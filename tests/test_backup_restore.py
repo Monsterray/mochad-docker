@@ -1,10 +1,10 @@
 import io
 import json
 import os
-from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from scripts.backup.backup_restore import (
@@ -13,7 +13,6 @@ from scripts.backup.backup_restore import (
     inspect_backup,
     restore,
 )
-
 
 SHA = "a" * 40
 
@@ -103,9 +102,22 @@ class BackupRestoreTests(unittest.TestCase):
                 "release/versions.env",
                 b"KEY=-----BEGIN PRIVATE KEY-----\n",
             ),
+            # A credential assigned inline, rather than embedded in a URL or
+            # PEM block. This is the shape a docker-compose.yml `environment:`
+            # block actually takes, and the one _check_content used to miss:
+            # SECRET_RE was applied only to environment *key names* in
+            # _environment_snapshot(), never to file content.
+            (
+                "docker-compose.yml",
+                b"environment:\n  MQTT_PASSWORD: hunter2\n",
+            ),
+            (
+                "release/versions.env",
+                b"MQTT_PASSWORD=hunter2\n",
+            ),
         )
         for name, data in cases:
-            with self.subTest(name=name):
+            with self.subTest(name=name, data=data):
                 with tempfile.TemporaryDirectory() as directory:
                     root = Path(directory)
                     source = root / "source"
@@ -118,6 +130,53 @@ class BackupRestoreTests(unittest.TestCase):
                             root / "backup.tar.gz",
                             repository_sha=SHA,
                         )
+
+    def test_backup_refuses_non_utf8_content_rather_than_skip_the_scan(self):
+        # _check_content()'s credential-assignment scan needs decoded text.
+        # A silent "return" on a decode failure would let one stray non-UTF-8
+        # byte anywhere in the file disable that scan for the *entire* file --
+        # including a plaintext credential sitting in otherwise-valid UTF-8
+        # right next to it. Refusing the backup outright is the fail-closed
+        # choice consistent with every other check in this function.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            _source(source)
+            (source / "release/versions.env").write_bytes(
+                b"MQTT_PASSWORD=hunter2\n\xff\n"
+            )
+            with self.assertRaisesRegex(BackupError, "not valid UTF-8"):
+                create_backup(
+                    source,
+                    root / "backup.tar.gz",
+                    repository_sha=SHA,
+                )
+
+    def test_backup_does_not_over_flag_benign_content(self):
+        # A keyword-shaped regex broadened to catch inline credentials is
+        # easy to get wrong in the other direction -- flagging ordinary text
+        # that merely mentions "password" or "key". None of these should
+        # block a backup.
+        cases = (
+            ("docker-compose.yml", b"# password policy: rotate every 90 days\n"),
+            ("docker-compose.yml", b"# primary key: id\n"),
+            ("release/versions.env", b"MOCHAD_PORT=1099\n"),
+        )
+        for name, data in cases:
+            with self.subTest(name=name, data=data):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    source = root / "source"
+                    source.mkdir()
+                    _source(source)
+                    existing = (source / name).read_bytes()
+                    (source / name).write_bytes(existing + data)
+                    create_backup(
+                        source,
+                        root / "backup.tar.gz",
+                        repository_sha=SHA,
+                    )
 
     def test_inspection_fails_closed(self):
         for failure in ("checksum", "schema", "extra"):

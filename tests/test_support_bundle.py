@@ -4,13 +4,12 @@ import importlib.util
 import io
 import json
 import os
-from pathlib import Path
 import subprocess
 import tarfile
 import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "support" / "collect-support-bundle.py"
@@ -151,9 +150,8 @@ class SupportBundleTests(unittest.TestCase):
                 support_bundle,
                 "scan_archive",
                 return_value=[{"path": "manifest.json", "classes": ["tampered"]}],
-            ):
-                with self.assertRaises(support_bundle.SecretScanError):
-                    builder.write()
+            ), self.assertRaises(support_bundle.SecretScanError):
+                builder.write()
             self.assertFalse(output.exists())
 
     def test_compose_sanitizer_keeps_structure_not_values_or_secrets(self) -> None:

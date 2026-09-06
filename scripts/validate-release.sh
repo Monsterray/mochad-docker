@@ -9,7 +9,7 @@ fi
 
 tag="$1"
 notes_file="${2:-}"
-script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+script_dir="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 root_dir="$(dirname -- "$script_dir")"
 version_file="${VERSION_FILE:-$root_dir/VERSION}"
 changelog_file="${CHANGELOG_FILE:-$root_dir/CHANGELOG.md}"
