@@ -8,17 +8,16 @@ import hashlib
 import ipaddress
 import json
 import os
-from pathlib import Path
 import re
 import stat
 import subprocess
 import tarfile
 import tempfile
+import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
-import uuid
-
 
 SCHEMA_VERSION = 1
 GENERATOR_VERSION = "1.0.0"
@@ -102,10 +101,10 @@ FORBIDDEN_FILENAME = re.compile(
     r"[^/]*(?:credential|password|private[-_]?key|secret|token)[^/]*$)"
 )
 HIGH_ENTROPY_CANDIDATE = re.compile(r"(?<![A-Za-z0-9])[A-Za-z0-9_+/=-]{32,}(?![A-Za-z0-9])")
-URL_USERINFO = re.compile(r"\b([a-z][a-z0-9+.-]*://)(?!\[REDACTED:)[^/\s@]+@", re.I)
+URL_USERINFO = re.compile(r"\b([a-z][a-z0-9+.-]*://)(?!\[REDACTED:)[^/\s@]+@", re.IGNORECASE)
 PRIVATE_KEY_BLOCK = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----",
-    re.S,
+    re.DOTALL,
 )
 CREDENTIAL_VALUE = re.compile(
     rf"(?i)({_KEY_PREFIX}{_KEYWORD}{_KEY_SUFFIX}\s*[=:]\s*)"
@@ -162,7 +161,7 @@ def _safe_url(value: str) -> str:
     return urlunsplit((parsed.scheme, hostname, parsed.path, parsed.query, parsed.fragment))
 
 
-def _pseudonymize_ipv6(match: "re.Match[str]", aliases: Aliases) -> str:
+def _pseudonymize_ipv6(match: re.Match[str], aliases: Aliases) -> str:
     candidate = match.group()
     try:
         address = ipaddress.ip_address(candidate)

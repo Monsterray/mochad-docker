@@ -1,10 +1,10 @@
 import io
 import json
 import os
-from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from scripts.backup.backup_restore import (
@@ -13,7 +13,6 @@ from scripts.backup.backup_restore import (
     inspect_backup,
     restore,
 )
-
 
 SHA = "a" * 40
 

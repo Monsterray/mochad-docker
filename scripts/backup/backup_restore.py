@@ -4,18 +4,17 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import hashlib
 import io
 import json
 import os
-from pathlib import Path, PurePosixPath
 import re
 import shutil
 import stat
 import subprocess
 import tarfile
-
+from datetime import datetime, timezone
+from pathlib import Path, PurePosixPath
 
 SCHEMA_VERSION = 1
 MAX_MEMBER_BYTES = 2 * 1024 * 1024
