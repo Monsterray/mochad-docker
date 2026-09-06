@@ -118,10 +118,19 @@ def _check_content(name: str, data: bytes) -> None:
         raise BackupError(f"{name} contains binary data")
     if PRIVATE_KEY_RE.search(data) or URL_CREDENTIAL_RE.search(data):
         raise BackupError(f"{name} contains secret material")
+    # PRIVATE_KEY_RE and URL_CREDENTIAL_RE run on raw bytes, so no encoding
+    # can hide a match from them. CREDENTIAL_ASSIGNMENT_RE needs decoded
+    # text, and a "return" on a decode failure would silently skip it for
+    # the rest of the file -- one stray non-UTF-8 byte anywhere would bypass
+    # the whole check even if a plaintext credential sits in valid UTF-8
+    # right next to it. These files are already required to be plain text
+    # (the b"\0" check above), so failing to decode as UTF-8 is itself
+    # anomalous for a docker-compose.yml or .env file and should refuse the
+    # backup, not silently narrow what gets checked.
     try:
         text = data.decode("utf-8")
-    except UnicodeDecodeError:
-        return
+    except UnicodeDecodeError as exc:
+        raise BackupError(f"{name} is not valid UTF-8: {exc}") from exc
     if CREDENTIAL_ASSIGNMENT_RE.search(text):
         raise BackupError(f"{name} contains secret material")
 

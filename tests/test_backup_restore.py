@@ -131,6 +131,28 @@ class BackupRestoreTests(unittest.TestCase):
                             repository_sha=SHA,
                         )
 
+    def test_backup_refuses_non_utf8_content_rather_than_skip_the_scan(self):
+        # _check_content()'s credential-assignment scan needs decoded text.
+        # A silent "return" on a decode failure would let one stray non-UTF-8
+        # byte anywhere in the file disable that scan for the *entire* file --
+        # including a plaintext credential sitting in otherwise-valid UTF-8
+        # right next to it. Refusing the backup outright is the fail-closed
+        # choice consistent with every other check in this function.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            _source(source)
+            (source / "release/versions.env").write_bytes(
+                b"MQTT_PASSWORD=hunter2\n\xff\n"
+            )
+            with self.assertRaisesRegex(BackupError, "not valid UTF-8"):
+                create_backup(
+                    source,
+                    root / "backup.tar.gz",
+                    repository_sha=SHA,
+                )
+
     def test_backup_does_not_over_flag_benign_content(self):
         # A keyword-shaped regex broadened to catch inline credentials is
         # easy to get wrong in the other direction -- flagging ordinary text
