@@ -219,8 +219,14 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertIn("--verify-tag", workflow)
         self.assertIn("--latest", workflow)
         self.assertNotIn("--prerelease", workflow)
+        # Pinned to a commit SHA (AUDIT.md #15); search for the pin plus
+        # its trailing version comment rather than the bare tag.
+        build_push_match = re.search(
+            r"uses: docker/build-push-action@[0-9a-f]{40} # v7", workflow
+        )
+        self.assertIsNotNone(build_push_match)
         self.assertLess(
-            workflow.index("uses: docker/build-push-action@v7"),
+            build_push_match.start(),
             workflow.index("name: Create or update GitHub Release"),
         )
 
@@ -232,10 +238,13 @@ class ContainerPermissionsTests(unittest.TestCase):
         self.assertNotIn("docker/setup-buildx-action@v3", content)
         self.assertNotIn("docker/build-push-action@v6", content)
         self.assertNotIn("docker/login-action@v3", content)
-        self.assertIn("docker/setup-qemu-action@v4", content)
-        self.assertIn("docker/setup-buildx-action@v4", content)
-        self.assertIn("docker/build-push-action@v7", content)
-        self.assertIn("docker/login-action@v4", content)
+        # Pinned to commit SHAs (AUDIT.md #15); each assertion below
+        # matches the pin plus its trailing version comment, since the
+        # bare tag no longer appears as its own substring.
+        self.assertRegex(content, r"docker/setup-qemu-action@[0-9a-f]{40} # v4")
+        self.assertRegex(content, r"docker/setup-buildx-action@[0-9a-f]{40} # v4")
+        self.assertRegex(content, r"docker/build-push-action@[0-9a-f]{40} # v7")
+        self.assertRegex(content, r"docker/login-action@[0-9a-f]{40} # v4")
         self.assertNotIn("--format '{{ .Digest }}'", content)
         self.assertIn("--format '{{ .Manifest.Digest }}'", content)
         self.assertIn("--output type=oci,dest=/tmp/mochad-ci-index.tar", content)
