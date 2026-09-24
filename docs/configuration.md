@@ -50,6 +50,7 @@ MOCHAD_OPENREMOTE_PORT=1101
 MOCHAD_SHOW_VERSION=false
 MOCHAD_SHOW_HELP=false
 MOCHAD_ARGS=
+MOCHAD_LOG_LEVEL=info
 ```
 
 `USB_GID` is independent from `PGID`. `auto` reads the numeric owner group

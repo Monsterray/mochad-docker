@@ -2,6 +2,10 @@
 set -eu
 
 image="${1:?usage: scripts/validate-image-labels.sh <image>}"
+expected_packaging_sha="${2:-}"
+expected_redux_sha="${3:-}"
+expected_image_version="${4:-}"
+expected_redux_version="${5:-}"
 
 require_label() {
     key="$1"
@@ -38,14 +42,33 @@ case "$revision" in
         ;;
 esac
 
+if [ "${#revision}" -ne 40 ] || { [ -n "$expected_packaging_sha" ] && [ "$revision" != "$expected_packaging_sha" ]; }; then
+    echo "FAIL: packaging revision does not match the expected 40-character SHA" >&2
+    exit 1
+fi
+
 case "$redux_revision" in
-    unknown)
-        ;;
     *[!0-9a-f]*|'')
         echo "FAIL: io.github.monsterray.mochad-redux.revision must be a git SHA" >&2
         exit 1
         ;;
 esac
+
+if [ "${#redux_revision}" -ne 40 ] || { [ -n "$expected_redux_sha" ] && [ "$redux_revision" != "$expected_redux_sha" ]; }; then
+    echo "FAIL: Redux revision does not match the expected 40-character SHA" >&2
+    exit 1
+fi
+
+image_version="$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')"
+redux_version="$(docker image inspect "$image" --format '{{ index .Config.Labels "io.github.monsterray.mochad-redux.version" }}')"
+if [ -n "$expected_image_version" ] && [ "$image_version" != "$expected_image_version" ]; then
+    echo "FAIL: packaging version does not match VERSION" >&2
+    exit 1
+fi
+if [ -n "$expected_redux_version" ] && [ "$redux_version" != "$expected_redux_version" ]; then
+    echo "FAIL: Redux version does not match embedded source" >&2
+    exit 1
+fi
 
 case "$base_name" in
     *alpine:3.22|*alpine@sha256:*)
