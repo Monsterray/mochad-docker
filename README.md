@@ -42,6 +42,12 @@ docker compose up --build -d
 docker compose logs -f mochad
 ```
 
+`MOCHAD_LOG_LEVEL=info` is the Compose default. Set it in `.env` to adjust
+daemon logging without changing the image. Workspace builds should use
+`scripts/build_dev_images.sh` from the X10 workspace root; it passes the exact
+Redux and packaging commits, versions, Alpine digest, and commit date into
+the image labels and validates them after building.
+
 The supplied Compose service includes the required USB bus mount and USB
 character-device rule:
 
