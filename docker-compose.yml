@@ -21,6 +21,11 @@ services:
     container_name: mochad
     hostname: mochad
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
     volumes:
       - /dev/bus/usb:/dev/bus/usb

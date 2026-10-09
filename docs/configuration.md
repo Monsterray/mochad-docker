@@ -104,3 +104,19 @@ image: ghcr.io/monsterray/mochad-docker:0.4.0
 ```
 
 Do not treat a README example as proof that a tag has been published.
+
+## Container Logs
+
+The Compose example explicitly rotates `json-file` logs at 10 MB, retaining
+three files per container. Recreate containers to apply a logging-policy
+change. Save relevant logs separately before rotation removes them.
+
+Use `MOCHAD_LOG_LEVEL=info` for normal operation. Redux versions containing the
+client-log clarity fix log short command-free health probes at DEBUG. Active
+clients and persistent disconnects remain visible at INFO; failed reads,
+writes, and slow-client disconnections remain visible. Raw byte dumps require
+DEBUG and do not change TCP framing or configured raw-data output.
+
+Set the same `TZ` in both containers if matching local timestamps are desired.
+The bridge logs its UTC offset; mochad's legacy protocol timestamps remain
+local time. Existing timezone defaults are unchanged.
